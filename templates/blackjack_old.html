@@ -1,0 +1,1106 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-container">
+
+
+  <div class="toc">
+    <h4>Sommaire</h4>
+    <ul>
+      <li><a href="#Presentation">Présentation du jeu et de ses règles</a></li>
+      <li>
+        <a href="#1">I. Définition formelle du processus aléatoire</a>
+        <ul>
+          <li><a href="#1.1">I.1 Suite de variable aléatoire \((X_n)_{n > 0}\)</a></li>
+          <li><a href="#1.2">I.2 Chaine de Markov absorbante et calcul des probabilités</a></li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+
+
+  <div class="text-block">
+    <h2 id="intro">Analyse du Blackjack : Choix optimaux, résolution analytique et simulation</h2>
+    
+    <h3 id="Presentation"> Présentation du jeu et de ses règles</h3>
+
+
+    <h3 id="1"> I. Définition formelle du processus aléatoire</h3>
+
+    <p>
+      L'objectif de cette première partie est de pouvoir calculer les probabilités conditionnelles de gain du joueur.     
+      Autrement dit, sachant la main actuelle du joueur et celle du croupier quelles sont les chances de victoire du joueur ? <br />   
+      Nous verrons que sous certaines hypohtèses, il est possible de ramener le problème à une <b>chaine de Markov absorbante</b>, permettant ainsi le calcul  
+      des probabilités sous forme matricielle. <br />
+      On se place dans un espace probabilisé \((\Omega, \mathcal{F}, \mathbb{P})\).
+
+    </p>
+
+    <h4 id="1.1"> I.1 Suite de variable aléatoire \((X_n)_{n > 0}\)</h3>
+
+    <p>
+    On considère un sabot composé de 
+    \( N \in \mathbb{N}^* \cup  \{+\infty \} \) jeux de cartes, soit un total de 
+    \( 52 \cdot N \) cartes lorsque \( N \) est fini.  
+    On souhaite modéliser via une suite de variables aléatoires un tirage successif sans remise de plusieurs cartes.
+    </p>
+
+    <p>
+    Soit \( (X_n)_{n > 0} \) une suite de variables aléatoires représentant une suite de tirages consécutifs de cartes sans remise.  
+    \( X_1 \) est la v.a de la première carte tirée du sabot, \( X_2 \) la deuxième, ... <br />  
+    Soit \( (\mathcal{F}_n)_{n > 0} \) la filtration naturelle adaptée à la suite \( (X_n)_{n > 0} \). <br />   
+    La filtration est définie par \( \mathcal{F}_n = \sigma(X_1,..., X_n) \) et pour tout \( n>0 \), \( X_n \) est \(\mathcal{F}_n\)-mesurable.
+    </p>
+
+    <p>
+    La tribu \( \mathcal{F}_n \) nous donne accès à toute l'information sur la variable aléatoire \( X_n \) et nous permet de mesurer tout événement
+    issu de \( X_1, ..., X_n \).
+    </p>
+
+    <p>
+    Soit \( (\text{E}, \mathcal{E}) \) un espace mesuré, on définit \( X_n \) par :  
+    </p>
+    \[
+    X_{n} : (\Omega, \mathcal{F}) \to (E, \mathcal{E}), \quad n >0
+    \]
+
+    <p>
+    Le support \( E \) est fini puisqu'il existe 52 cartes uniques dans un jeu de cartes.  
+    On a donc que pour tout \( n>0, \ \text{card}(E) \leq 52 \), avec égalité dans le cas où le nombre de jeux \( N \) dans le sabot
+    est infini (ou si un mélange du sabot est effectué avant tout tirage \( X_n \), équivalant à un tirage avec remise).
+    </p>
+
+    <p>
+    Puisque les tirages \( X_n \) se font sans remise, la famille de v.a \( (X_n)_{n > 0} \) n'est pas indépendante lorsque \( N \) est fini.  
+    En revanche, si \( N = +\infty \), cela est équivalent à un tirage avec remise, et les \( X_n \) sont alors i.i.d.
+    </p>
+
+    
+
+     <p>
+      Soit \( v : (E, \mathcal{E}) \to  [\![2; 10]\!] \cup \{A\}\) la fonction associant la valeur numérique de \(X_n\) et définit par : 
+
+       \[
+    v(X_n) =
+    \begin{cases}
+    10 & \text{si } X_n \text{ est une figure (J, Q, K),} \\
+    r(X_n) & \text{si } X_n \text{ a un rang numérique } r(X_n) \in \{2, \dots, 10\}, \\
+    A & \text{si } X_n \text{ est un As.}
+    \end{cases}
+    \]
+     </p>
+
+     On notera \(G\) l'ensemble d'arrivée de la v.a \(v(X_n)\) et sa tribu associée \(\mathcal{G} = P(G)\)
+   
+
+    <h4 id="1.2"> I.2 Valeur d'une main et variable aléatoire \( \mu_n \circ \mathbf{H}_n \)</h3>
+
+    <p>
+    Soit \( (X_{\phi(n)})_{n > 0} \) une suite extraite de \( (X_n)_{n > 0} \), avec \( \phi : \mathbb{N} \to \mathbb{N}\) strictement croissante. 
+    Ici \(\phi(n)\) représente l'indice des cartes que va tirer un joueur pour se constituter une main. Par exemple pour deux joueurs tirant chacun leur tour dans le sabot,
+    l'un aura une main représenté par la suite \( (X_{2n})_{n > 0} \)  et l'autre \( (X_{2n+1})_{n > 0} \).
+  
+    </p>
+
+    <p>
+    Pour une main quelconque, on notera \( (H_n)_{n > 0} = (v(X_{\phi(n)}))_{n > 0} \) la suite de cartes tirées par le joueur. On munit la suite de sa filtration naturelle, 
+    \((\mathcal{G}_n)_{n > 0} = \sigma(H_1,...H_n)\).
+    </p>
+
+    <p>
+      Soit un joueur tirant \(n>0\) cartes. On définit sa main issue de ces tirages comme le vecteur aléatoire \(H\) : 
+
+      \[
+      \begin{aligned}
+      \mathbf{H}_n  : (\Omega, \mathcal{F}) & \longrightarrow (G^n, \mathcal{G}_n)  \\
+      \omega  &\longmapsto (H_1(\omega), \dots, H_n(\omega))
+      \end{aligned}
+      \]
+
+    </p>
+
+    <p>
+    Soit une famille de fonction \((\nu_n)_{n>0} \ \). Pour tout \(n >0\),  \( \ \ \nu_n: G^n \to\  \mathbb{N}  \ \). Avec \(  \forall (x_1,...,x_n) \in G^n  \) : 
+    \[
+      \nu_n(x_1,...,x_n) =  \sum_{x\in (x_1,...,x_n)}\Big( x\,\mathbf{1}_{\{x\neq A\}} + 11\cdot\mathbf{1}_{\{x=A\}}\Big)
+    \]
+    Le réel issu de  \( (\nu_n \circ \mathbf{H}_n)(\omega)\) représente le nombre d'As tiré. Par exemple \(\nu_3((A,2,10)) = 11 + 2 + 10 = 22\)
+    </p>
+
+    <p>
+    Soit une deuxième famille \((\eta_n)_{n>0} \ \). Pour tout \(n >0\),  \( \ \ \eta_n: G^n \to\  \mathbb{N}^*  \ \). Avec \( \forall (x_1,...,x_n) \in G^n   \) : 
+    \[
+      \eta_n(x_1,...,x_n) =  \sum_{x\in (x_1,...,x_n)} \mathbf{1}_{\{x=A\}}
+    \]
+    \(\eta_n \) représente le nombre d'As présent dans une main à \(n\) cartes.  Une des règles du Blackjack est que chaque As en main peut prendre la valeur de \(1\) ou \(11\) selon le choix
+    du joueur. Il est intéressant pour ce dernier de comptabiliser les As de sorte à se rapprocher de \(21\) sans dépasser ce
+    score. Par exemple pour une main \((A, 6, A)\), le meilleur score que le joueur puisse réclamer est \(18\), en comptant un As
+    pour \(11\) et l'autre pour \(1\). 
+    </p>
+
+    <p>
+    On peut définir alors selon ce principe \((\mu_n)_{n>0} \ \). Pour tout \(n >0\), \( \mu: G^n \to\  \mathbb{N} \) la valeur optimale pour toute main \(H = (x_1,...,x_n) \in G^n\) :
+    \[
+    \mu_n(H) = \nu_n(H)- 10 \cdot \min\Big(\eta_n(H), \quad \text{arg}\max_{k \in \mathbb{N}} \{\nu_n(H) - 10k \le 21 \} \Big)
+    \]
+    </p>
+
+    <p>
+     Pour tout \( n \in \mathbb{N}^*\), \( \ \ (\mu_n \circ \mathbf{H}_n) \) est une v.a à valeur dans \(\mathbb{N} \). On définit la alors la suite
+     \( (\mu_n(\mathbf{H}_n))_{n >0} \) munit de sa filtration naturelle comme suite de valeurs optimales des tirages du joueur.
+    </p>
+
+    <p>
+    On définit de la même façon pour tout \( n \in \mathbb{N}^*\), \( (\mu(\mathbf{D}_n))_{n >0} \), la suite de valeurs optimales du croupier
+    avec \(\mathbf{D}_n = (D_1, ..., D_n) \) à valeur dans \((G^n, \mathcal{G}_n)\) et \( (D_n)_{n > 0} =  (v(X_{\psi(n)}))_{n > 0} \) <br /> 
+    \(\psi(n)\) est l'indice des cartes tirées par le croupier. On a également que \( \forall n >0, \ \  \psi(n) \neq \phi(n) \)
+    </p>
+
+    <p>
+    Avec les règles du soft 17, le croupier doit s'arrêter de tirer lorsque ce dernier obtient \(17\) ou plus. On modélise cela par : 
+    \[
+      \tau := \inf \{ n > 0 :  \mu_n \circ \mathbf{D}_n \geq 17\}
+    \]
+    Ce temps d'arrêt représente le premier instant où la valeur optimale du croupier dépasse ou atteint 17.
+    Par la suite, on parlera simplement de la valeur ou score d'une main, pour désigner la valeur optimale.
+    </p>
+
+    <h4 id="1.3"> I.3 Construction de la main \(H'_m\) et équivalence</h3>
+
+      <p>
+        Nous construisons dans cette partie une nouveau vecteur aléatoire \(\mathbf{H}'_n\) issu de \(\mathbf{H}_n\). Nous verrons par la suite que la partie de calcul des probabilités 
+        en sera grandement simplifiée. On introduit un nouveau vecteur de famille de fonctions  \((f_n)_{n>0} \). <br /> 
+        Pour tout \(n >0\), \(  \ \ f_n : G^n \to\  \{0,1\}^3 \times \mathbb{N}^* \ \). Avec pour toute main \(H = (x_1,...,x_n) \in G^n\) :
+
+        \[
+           f_n(H) =
+        \begin{pmatrix}
+         f_{0,n}(H) \\
+         f_{1,n}(H) \\
+         f_{2,n}(H) \\
+         f_{3,n}(H)
+        \end{pmatrix}
+        =
+         \begin{pmatrix}
+        \mathbb{1}_{\eta_n(H) \ge \text{arg}\max\limits_{k \in \mathbb{N}} \{\nu_n(H) - 10k \le 21\}} \\
+        (\mu(H)-11) \, \mathbf{1}_{\{f_{0,n}(H) = 1\}} + \mu(H) \, \mathbf{1}_{\{f_{0,n}(H) \neq 1\}} \\
+        \mathbb{1}_{\{ 10 \notin H , \; f_{1,n}(H) = 10  \}} \\
+        \mathbb{1}_{\{x_1=x_2  , \;  n=2\}} 
+      
+        \end{pmatrix}
+        \]
+      
+        La première composante \(f_{0,n}(H)\) donne l'information sur la présence d'un "soft" As ou non dans la main \(H\). Un As est dit soft si ce dernier peut prendre la valeur de \(1\) ou \(11\) 
+        sans dépasser \(21\). <br />  
+        \(f_{1,n}(H)\) la valeur de la main en enlevant l'As si ce dernier est soft.
+        \(f_{2,n}(H)\) renvoie 1 si un score de \(10\) sans l'As soft est présent et sans que de 10 ne soit dans la main. Cette information nous sera plus tard utile pour séparer le cas de Blackjack des 
+        autres cas. Enfin \(f_{3,n}(H)\)= 1 si une paire est présente, sinon 0. 
+        
+      </p>
+
+      <p>
+         On introduit un dernier vecteur à deux dimensions, toujours à partir d'une main de taille \(n\).  : <br />  
+         Pour tout \(n >0\), \(  \ \ g_n : G^n \to\  (G^n \cup \{0, A\} ) \times  (\mathbb{N} \cup \{10+, A\}) \). Avec pour toute main \(H = (x_1,...,x_n) \in G^n\) :
+
+        \[
+        g_n(H) =
+        \begin{pmatrix}
+        \dfrac{f_{3,n}(H)}{2}
+        \, \mathbf{1}_{\{f_{3,n}(H)=1,\; f_{0,n}(H)=0 \}} 
+        + A\,\mathbf{1}_{\{f_{0,n}(H)=1\}} \\[8pt]
+        %
+        \dfrac{f_{3,n}(H)}{2}
+        \, \mathbf{1}_{\{f_{3,n}(H)=1,\; f_{0,n}(H)=0 \}}
+        + A\, \mathbf{1}_{\{f_{3,n}(H)=f_{0,n}(H)=1 \}} \\[3pt]
+        + \{10+\}\mathbf{1}_{\{f_{0,n}(H)=1\}}
+        + f_{1,n}(H) \mathbf{1}_{\{f_{3,n}(H)=f_{2,n}(H)=f_{0,n}(H)=0\}}
+        \end{pmatrix}
+        \]
+
+      </p>
+
+        On notera \(K = (G^n \cup \{0, A\} ) \times  (\mathbb{N} \cup \{10+, A\})\) l'espace d'arrivé. \(g_n\) permet en quelque sorte de "compresser" l'information de \(H\). On peut alors savoir avec seulement deux valeurs, si une main
+        possède un As soft, une paire, ou un 10 unique. Par exemple, on obtient : 
+
+        <ul>
+        <li>\(g_4((A,3,6,A)) =  (A, 10+)\)</li>
+        <li>\(g_2((A, 10)) =  (A, 10)\)</li>
+        <li>\(g_3((4,4,2)) = (0,10+) \)</li>
+        <li>\(g_1((10)) = (0,10)\)</li>
+        <li>\(g_2((9,9)) = (9,9)\)</li>
+
+
+        </ul>
+
+      </p>
+
+      <p>
+      Une propriété importante de \( g_n \) est que : 
+      \[
+      \forall n > 0, \ \forall H \in G^n, \quad \mu_n(H) = (\mu_n \circ g_n)(H).
+      \]
+      On notera par la suite \( g_n \circ \mathbf{H}_n = \mathbf{H}'_n  = 
+        \begin{pmatrix}
+         \mathbf{H}'_{0,n} \\
+         \mathbf{H}'_{1,n}
+        \end{pmatrix} \), 
+        pour la main du joueur et \( g_n \circ \mathbf{D}_n = \mathbf{D}'_n  =
+         \begin{pmatrix}
+         \mathbf{D}'_{0,n} \\
+         \mathbf{D}'_{1,n}
+        \end{pmatrix} \) pour la main du croupier.
+      </p>
+
+
+
+    <h4 id="1.3"> I.3 Probabilité des résultats de partie</h3>
+    <p>  
+    On considère un joueur ayant \(n\) cartes en main, modélisé par \(\mathbf{H}_n\) face à la main du croupier \(\mathbf{D}_{\tau}\). Pour connaître l'issue d'une partie, il suffit de connaître le résultat de ces deux v.a.
+    La construction de la tribu et mesure produit permet de définir la v.a : 
+
+    \[
+    \begin{aligned}
+    (\mathbf{H}_n, \mathbf{D}_{\tau}) : \Omega & \longrightarrow (G^n \times G^\tau, \ \mathcal{G}_n \otimes \mathcal{G}_{\tau}) \\
+    \omega &\longmapsto (\mathbf{H}_n(\omega), \mathbf{D}_n(\omega))
+    \end{aligned}
+    \]
+    </p>
+  
+    <p>
+    Le joueur gagne la partie si l'un de ces trois évenements ce produit :  <br /> 
+    le croupier dépasse 21 ; le score de main du joueur est supérieur à celui du croupier ; le joueur fait un blackjack et le croupier non. 
+    En plus d'une de ces trois conditions, le score du joueur doit obligatoirement etre en dessous de 21. On traduit cet evenement de victoire \(W_n\) pour tout \(n, \tau  >0\) : 
+
+    \[
+    W_n = \Big\{  (\mu_n \circ \mathbf{H'}_n) \leq 21 \ \cap \ \Big(  (\mu_n \circ \mathbf{H'}_n) > (\mu_{\tau} \circ \mathbf{D'}_\tau)
+    \ \cup \ (\mu_\tau \circ \mathbf{D'}_\tau) > 21\ \cup \ J_n
+    \Big)  \Big\}
+    \]
+
+    \[
+    J_n = \{ \mathbf{H}'_n = (A,10), \ \ \mathbf{D}'_{\tau} \neq (A,10)  \}
+    \]
+    </p>
+
+    <p>
+      On définit également \(E_n\) l'évenement associé a une égalité de partie et défini pour tout \( n, \tau > 0\)  : 
+      \[
+      E_n = \Big\{  (\mu_n \circ \mathbf{H}_n) \leq 21 \ \cap \  (\mu_n \circ \mathbf{H}_n) = (\mu_\tau \circ \mathbf{D}_\tau)
+      \Big\}
+      \]
+    </p>
+
+    <p>
+      Supposons désormais que \(m \in \mathbb{N}^*\) cartes ont été tiré du sabot, avant le début de la partie. Le joueur a comme information sa main et celle du croupier et souhaite estimer
+      sa probabilité de victoire en gardant sa main actuelle (revient à choisir STAND).
+      Comparons les probabilités conditionnelles suivantes : 
+
+      \[
+        \mathbb{P}(W_n \mid \mu_n \circ \mathbf{H}_n  = j, \ \mu_n \circ \mathbf{D}_1 = i)
+        \tag{1}
+      \]
+
+       \[
+        \mathbb{P}(W_n \mid \mathbf{H}'_n  = (j_1, j_2), \  \mathbf{D'}_1 = (i_1, i_2))
+        \tag{2}
+      \]
+ 
+      \[
+        \mathbb{P}(W_n \mid \mathbf{H}_n  = (j_1, \dots, j_n), \ \mathbf{D}_1 = (i_1, \dots, i_n))
+        \tag{3}
+      \]
+
+       \[
+        \mathbb{P}(W_n \mid \mathbf{H}_n  = (j_1, \dots, j_n), \ \mathbf{D}_1 = (i_1, \dots, i_n) , \  X_1 = k_1 , ... X_m = k_m  )
+        \tag{4}
+      \]
+
+
+    </p>
+
+    <p>
+    La probabilité \((1)\) évalue la chance de victoire selon le score \(\mu_n\) du joueur et du croupier (première carte). 
+    Cependant, la présence d’un As soft rend ces informations insuffisantes : par exemple, 
+    \(\mathbb{P}(\mathbf{H}_{n+1} = 15 \mid \mathbf{H}_{n} = 16) = 0\) sans As, mais cette probabilité est non nulle avec un As soft. 
+
+    </p>
+
+     <p>
+    La probabilité \((2)\) utilise l'information de \(\mathbf{H}'_n\) et \(\mathbf{D}'_n\) . Cette information permet un plus large éventail de stratégie de la part du joueur comme
+    jouer sur la présence d'un As soft, d'une paire,... En revanche le joueur n'a pas l'information sur l'ensemble des cartes tirées lors de la partie.
+    Cette information correspond à l'équation \((3)\).
+    </p>
+
+    <p>
+    \((4)\) permet de prendre en compte en plus des cartes tirées lors de la partie, l'ensemble des cartes tirées du sabot (sans mélange). Cette information est d'autant plus importante
+    lorsque un grand nombre de cartes \(m\) on été tirés avant le début de la partie et qu'il reste peu de cartes dans le sabot. Dans le cas général, on a que \( (4) \neq (3) \neq (2) \neq(1)  \)
+    lié au différentiel d'informations.
+    </p>
+
+    <p>
+      On définit à partir de \(\mathbb{P}(W_n)\) et \(\mathbb{P}(E_n)\), la probabilité de défaite simplement par : 
+
+      \[
+        \mathbb{P}(L_n) = 1 - \mathbb{P}(W_n) - \mathbb{P}(E_n)
+      \]
+
+    </p>
+
+    <p>
+      \((1), (2), (3), (4)\) reviennent à calculer une probabilté avec une main actuelle, sans tirages supplémentaire. Plus généralemnt, si le joueur souhaite estimer sa probabilité de gain en tirant 
+      \(k \in \mathbb{N}\) supplémentaires , on s'intéressera alors à la probabilité suivante :
+      
+      \[
+        \mathbb{P}(W_{n+k} \mid \mathbf{H}_n  = (j_1, \dots, j_n), \ \mathbf{D}_1 = (i_1, \dots, i_n) , \  X_1 = k_1 , ... X_m = k_m  )
+        \tag{4}
+      \]
+    </p>
+
+
+
+  
+    <h4 id="1.4"> I.4 Chaine de Markov absorbante, calcul de \(\mathbb{P}(\mathbf{D}'_\tau)\)</h3>
+
+    <p>
+    Le calcul des probabilités conditionnelles est dans le cas général un calcul non trivial. En effet, lorsque \(N\) est fini, la  
+    famille \((X_n)_{n > 0}\) n'est pas indépendante, et chaque tirage est dépendant des précédents. Pour résoudre ce problème il faudrait utiliser une approche récursive via l'équation de Bellman.  
+    </p>
+
+    <p>
+    Sous hypothèse que \(N = +\infty\) on a indépendance des \(X_n\), et il est facile de déduire que \((4) = (3) = (2)\). 
+    Cela revient à se dire : seul ma main et seul du croupier importe. Qui plus, il est possible de réduire grandemement l'espace d'arrivée et la tribu via la transformation \(g_n\) et travailler seulement
+    avec \(\mathbf{H}'_n\) et \(\mathbf{D}'_n\). Notons que cette hypothèse est loin d'être irréaliste. En effet la quasi totalité des casinos mélange leur sabot de manière systématique entre les parties. Cette situation fait que 
+    \((4) = (3)\).
+    </p>
+
+    <p>
+    Soit \(N = +\infty\), on a pour tout \(n > 0 \ \) \(X_1 \sim \dots X_n \sim H_1 \dots \sim H_n\) et donc que la suite \((\mathbf{H}_n)_{n>0}\) est une chaîne de Markov homogène traduit par :
+    
+    \[
+    \forall n > 1, \; \forall (i, j) \in (G^n \times G^n), \quad 
+    \mathbb{P}(\mathbf{H}_{n+1} = j \mid \mathbf{H}_n = i) = 
+    \mathbb{P}(\mathbf{H}_n = j \mid \mathbf{H}_{n-1} = i)
+    \]
+    </p>
+
+    <p>
+    Les probabilités de transitions sont en effet indépendant de \(n\). Bien sûr c'est aussi le cas de la suite \((\mathbf{D}_n)_{n>0}\).
+    </p>
+
+     <p>
+    Les suite \((\mathbf{H}'_n)_{n>0}\) et \((\mathbf{D}'_n)_{n>0}\) sont quant à elles des chaînes de Markov simple, dont les probabilités de transition dépende uniquement de l'état précédent. 
+    Pour \((\mathbf{D}_n)_{n>0}\) cela se traduit par : 
+
+    \[
+    \forall n > 0, \; \forall (i_1, ..., i_n, j) \in K^{n+1}, \quad 
+    \mathbb{P}(\mathbf{D}'_{n+1} = j \mid \mathbf{D}'_1 = i_1,  \dots, \mathbf{D}'_n = i_n) = 
+    \mathbb{P}(\mathbf{D}'_{n+1} = j \mid \mathbf{D}_{n} = i)
+    \]
+    </p>
+
+    <p>
+    Cette probabilité ne dépends que de \(j\) et \(i_{n}\). Qui plus est, \((\mathbf{D}'_n)_{n>0}\) avec le temps d'arrêt \(\tau\) est bien chaîne de  
+    Markov absorbante puisque à partir de tout état \(i\),  il existe un état absorbant et atteignable \(j\), c'est à dire un état où   
+    \(\mathbb{P}(\mathbf{D}'_{n+1} = j \mid \mathbf{D}'_{n} = j)=1\). <br />  
+    </p>
+
+
+    <p>
+    Cette probabilité ne dépends que de \(j\) et \(i_{n}\). Qui plus est, \((\mathbf{D}'_n)_{n>0}\) avec le temps d'arrêt \(\tau\) est bien chaîne de  
+    Markov absorbante puisque à partir de tout état \(i\),  il existe un état absorbant et atteignable \(j\), c'est à dire un état où   
+    \(\mathbb{P}(\mathbf{D}'_{n+1} = j \mid \mathbf{D}'_{n} = j)=1\). <br />  
+    On peut ainsi définir la matrice de transition \(P\) du croupier de taille \(m \times m\). Il est possible de dénombrer le nombre d'états total    
+    \(m\) de la chaîne : 
+    </p>
+
+    <p>
+    \[
+    m = \operatorname{card}(\{0,1,10,10+,...,26\} \setminus \{1\}) 
+    + \operatorname{card}(\{\text{A},\text{A}\text{A},\text{A}2, ..., \text{A}10\}) 
+     = 28 -1 + 11 = 38
+    \]
+    </p>
+
+    <p>
+    La première composante de la somme représente les valeurs obtenues sans As, \(26\) étant le maximum atteint avec un état \(i\) de score \(16\) vers un état absorbant \(i+1\) en piochant une carte de valeur \(10\).  
+    La seconde composante correspond aux états obtenues avec un soft As. La troisième composante est le cas des paires.
+
+    <p>
+    Notons aussi que la suite \((\mu \circ \mathbf{D'}_n)_{n>0}\) n'est en général pas une sous-martingale. En effet bien que  \(\mathbb{E}[|\mu \circ \mathbf{D'}_n|] \leq 11 n <\infty\) pour tout \(n\). 
+    La relation  \(\ \mathbb{E}[(\mu \circ \mathbf{D'})_{n+1}\ | \ \sigma((\mu \circ \mathbf{D'})_1,...,(\mu \circ \mathbf{D'})_n)] \geq C_n\) n'est pas vraie à cause de la présence de l'As.
+    Même chose  pour \((\mu \circ \mathbf{H'}_n)_{n>0}\).
+    </p>
+
+    <p>
+    On utilisera par la suite la matrice de transition \(P\) sous sa forme canonique, c'est à dire sous la forme : 
+    </p>
+
+    <p>
+    \[
+    P = 
+    \begin{pmatrix}
+    Q & R \\
+    0 & I
+    \end{pmatrix}
+    \]
+    </p>
+
+    <p>
+    Avec \(Q\) est la sous matrice des états non absorbants de dimension \((m-r) \times (m-r)\), \(r\) étant le nombre d'états absorbants. 
+    \(R\) est la sous-matrice des états absorbants de taille \((m-r) \times r \) et \(I\) la matrice identité de taille \(r\). <br /> 
+    Par exemple pour la matrice \(R\) on obtient : 
+    </p>
+
+
+    \[
+    \scriptsize
+    R =
+    \left(
+    \begin{array}{c|c}
+      & 17 & 18 & 19 & 20 & 21 & 22 & 23 & 24 & 25 & 26 & \text{A6} & \text{A7} & \text{A8} & \text{A9} & \text{A10} \\ \hline
+    0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    2 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    3 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    4 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    5 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    6 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \tfrac{1}{13} & 0 & 0 & 0 & 0 \\
+    7 & \tfrac{4}{13} & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \tfrac{1}{13} & 0 & 0 & 0 \\
+    8 & \tfrac{1}{13} & \tfrac{4}{13} & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \tfrac{1}{13} & 0 & 0 \\
+    9 & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{4}{13} & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \tfrac{1}{13} & 0 \\
+    10 & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{4}{13} & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \tfrac{1}{13} \\
+    \text{10+} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{4}{13} & \tfrac{1}{13} & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    11 & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{4}{13} & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    12 & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{4}{13} & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    13 & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{4}{13} & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \\
+    14 & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{4}{13} & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \\
+    15 & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{4}{13} & 0 & 0 & 0 & 0 & 0 & 0 & \\
+    16 & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{4}{13} & 0 & 0 & 0 & 0 & 0 & \\
+    \text{A} & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{4}{13} \\
+    \text{AA} & 0 & 0 & 0 & 0 & \tfrac{1}{13} & 0 & 0 & 0 & 0 & 0 & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & 0 \\
+    \text{A2} & 0 & 0 & 0 & 0 & \tfrac{1}{13} & 0 & 0 & 0 & 0 & 0 & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & 0 \\
+    \text{A3} & 0 & 0 & 0 & 0 & \tfrac{1}{13} & 0 & 0 & 0 & 0 & 0 & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & 0 \\
+    \text{A4} & 0 & 0 & 0 & 0 & \tfrac{1}{13} & 0 & 0 & 0 & 0 & 0 & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & 0 \\
+    \text{A5} & 0 & 0 & 0 & 0 & \tfrac{1}{13} & 0 & 0 & 0 & 0 & 0 & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & 0 \\
+    \end{array}
+    \right)
+
+    \]    
+
+
+
+    <p>
+    On notera les éléments de la matrice \(P\) par :
+    </p>
+
+    \[
+    p_{ij} = \mathbb{P}^{k,i}(\mathbf{D'}_{k+1}=j) = \mathbb{P}(\mathbf{D'}_{k+1}=j \mid \mathbf{D'}_k=i)
+    \]
+
+    <p>
+    \(I - Q\) est inversible et l'expression de la matrice fondamentale \(N\) suivante :
+    </p>
+
+    \[
+    N := (I- Q) ^{-1} = I + Q + Q^2 + \dots
+    \]
+
+    <p>
+    De plus l'élément \(n_{i,j}\) de la matrice \(N\) est égal à l'espérance du nombre de passages dans l'état \(j\), depuis l'état \(i\) :
+    </p>
+
+    \[
+    n_{ij} = \mathbb{E}^i \Big(\sum_{k \geq 0} \mathbb{1}_{\mathbf{D'}_k = j}\Big) := \mathbb{E} \Big(\sum_{k \geq 0} \mathbb{1}_{\mathbf{D'}_k = j} \mid \mathbf{D'}_1 = i\Big)
+    \]
+
+    <p>
+    Enfin on peut calculer à partir de la matrice fondamentale \(N\) la matrice \(B= NR\) de dimension \((22 \times 15)\) composée  
+    des éléments \(b_{iq} = \mathbb{P}^{i}(\mathbf{D'}_{\tau}=q)\) qui est la probabilité d'atteindre l'état absorbant \(q\), si l'on part de l'état \(i\).  
+    Cela se démontre par : 
+    
+
+
+  \begin{align*}
+  \sum_{j=1}^{m-r} n_{ij} 
+  &= \sum_{j=1}^{m-r} \mathbb{E}^i \!\left( \sum_{k \ge 1} \mathbf{1}_{\{\mathbf{D'}_k = j\}} \right)
+  = \mathbb{E}^i \!\left( \sum_{k \ge 1} \mathbf{1}_{\{\mathbf{D'}_k < m - r\}} \right) \\[6pt]
+  &= \sum_{k \ge 1} \mathbb{P}^i\{\tau > k\}
+  = \sum_{k \ge 1} \sum_{\ell \ge k+1} \mathbb{P}^i\{\tau = \ell\} \\[6pt]
+  &= \sum_{\ell \ge 1} \sum_{k=1}^{\ell-1} \mathbb{P}^i\{\tau = \ell\}
+  = \sum_{\ell \ge 1} \ell \, \mathbb{P}^i\{\tau = \ell\}
+  = \mathbb{E}^i(\tau).
+  \end{align*}
+
+  Pour atteindre l'état absorbant \(q\), il existe un temps \(k\) tel que
+  \(\mathbf{D'}_k \le m - r\) et \(\mathbf{D'}_{k+1} = q\).
+  On a donc
+  \begin{align*}
+  b_{iq}
+  &= \mathbb{P}^i\{\mathbf{D'}_\tau = q\}
+  = \sum_{k \ge 0} \mathbb{P}^i\{\mathbf{D'}_k \le m - r,\, \mathbf{D'}_{k+1} = q\} \\[6pt]
+  &= \sum_{k \ge 0} \sum_{\ell = 1}^{m-r}
+  \mathbb{P}^i\{\mathbf{D'}_k = \ell\} \, \mathbb{P}^{k,\ell}\{\mathbf{D'}_{k+1} = q\} \\[6pt]
+  &= \sum_{k \ge 0} \sum_{\ell = 1}^{m-r} (Q^k)_{i\ell} R_{\ell q}
+  = \sum_{k \ge 0} (Q^k R)_{iq}
+  = (N R)_{iq},
+  \end{align*}
+  Cela démontre bien que  \( B = N R \).
+
+
+    </p>
+
+   <p>
+    Cette dernière matrice nous permet de calculer sans difficultés les quantités suivantes :
+  </p>
+
+  <ul>
+    <li>\(\mathbb{P}(W_{n+0} \mid \mathbf{H'}_n = j, \ \mathbf{D'}_1 = i)\)</li>
+    <li>\(\mathbb{P}(E_{n+0} \mid \mathbf{H'}_n = j, \ \mathbf{D'}_1 = i)\)</li>
+    <li>\(\mathbb{P}(L_{n+0} \mid \mathbf{H'}_n = j, \ \mathbf{D'}_1 = i)\)</li>
+  </ul>
+
+  <p>
+    En effet, puisque \(\mathbf{H'}_n\) est supposé connu, la seule v.a à étudier pour le calcul de ces probabilité est \(\mathbf{D'}_\tau\) à partir de \(\mathbf{D'}_1\). 
+    La matrice \(B\) nous apporte justement cette information.
+  </p>
+
+  <p>
+    Notons aussi que les probabilités de victoire sont égales pour tout score inférieur a 17 (le joueur ne peut espérer qu'un bust de la part du croupier pour gagner).
+    De même avec les probabilités d'égalité et défaite.
+    On simplifie l'affichage en affichant directement le score du joueur avec la distinction pour le cas du Blackjack. On obtient le tableau suivant : <br /> <br /> 
+  </p>
+
+
+    <!-- <div class="text-block">
+    {{ table_W_0 | safe }}
+    </div>-->
+
+    <table border="1" class="W0">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Carte croupier</th>
+      <th>2</th>
+      <th>3</th>
+      <th>4</th>
+      <th>5</th>
+      <th>6</th>
+      <th>7</th>
+      <th>8</th>
+      <th>9</th>
+      <th>10</th>
+      <th>A</th>
+    </tr>
+    <tr>
+      <th>Score joueur</th>
+      <th>Outcome</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th rowspan="3" valign="top">4-16</th>
+      <th>Victoire</th>
+      <td>0.35</td>
+      <td>0.37</td>
+      <td>0.39</td>
+      <td>0.42</td>
+      <td>0.42</td>
+      <td>0.26</td>
+      <td>0.24</td>
+      <td>0.23</td>
+      <td>0.21</td>
+      <td>0.12</td>
+    </tr>
+    <tr>
+      <th>Egalité</th>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+    </tr>
+    <tr>
+      <th>Défaite</th>
+      <td>0.65</td>
+      <td>0.63</td>
+      <td>0.61</td>
+      <td>0.58</td>
+      <td>0.58</td>
+      <td>0.74</td>
+      <td>0.76</td>
+      <td>0.77</td>
+      <td>0.79</td>
+      <td>0.88</td>
+    </tr>
+    <tr>
+      <th rowspan="3" valign="top">17</th>
+      <th>Victoire</th>
+      <td>0.35</td>
+      <td>0.37</td>
+      <td>0.39</td>
+      <td>0.42</td>
+      <td>0.42</td>
+      <td>0.26</td>
+      <td>0.24</td>
+      <td>0.23</td>
+      <td>0.21</td>
+      <td>0.12</td>
+    </tr>
+    <tr>
+      <th>Egalité</th>
+      <td>0.13</td>
+      <td>0.12</td>
+      <td>0.12</td>
+      <td>0.12</td>
+      <td>0.09</td>
+      <td>0.37</td>
+      <td>0.13</td>
+      <td>0.12</td>
+      <td>0.11</td>
+      <td>0.02</td>
+    </tr>
+    <tr>
+      <th>Défaite</th>
+      <td>0.52</td>
+      <td>0.50</td>
+      <td>0.49</td>
+      <td>0.47</td>
+      <td>0.49</td>
+      <td>0.37</td>
+      <td>0.63</td>
+      <td>0.65</td>
+      <td>0.68</td>
+      <td>0.87</td>
+    </tr>
+    <tr>
+      <th rowspan="3" valign="top">18</th>
+      <th>Victoire</th>
+      <td>0.49</td>
+      <td>0.51</td>
+      <td>0.52</td>
+      <td>0.54</td>
+      <td>0.59</td>
+      <td>0.63</td>
+      <td>0.37</td>
+      <td>0.35</td>
+      <td>0.32</td>
+      <td>0.25</td>
+    </tr>
+    <tr>
+      <th>Egalité</th>
+      <td>0.12</td>
+      <td>0.12</td>
+      <td>0.11</td>
+      <td>0.11</td>
+      <td>0.11</td>
+      <td>0.06</td>
+      <td>0.36</td>
+      <td>0.12</td>
+      <td>0.11</td>
+      <td>0.02</td>
+    </tr>
+    <tr>
+      <th>Défaite</th>
+      <td>0.39</td>
+      <td>0.37</td>
+      <td>0.36</td>
+      <td>0.35</td>
+      <td>0.31</td>
+      <td>0.31</td>
+      <td>0.27</td>
+      <td>0.53</td>
+      <td>0.57</td>
+      <td>0.73</td>
+    </tr>
+    <tr>
+      <th rowspan="3" valign="top">19</th>
+      <th>Victoire</th>
+      <td>0.63</td>
+      <td>0.64</td>
+      <td>0.65</td>
+      <td>0.66</td>
+      <td>0.69</td>
+      <td>0.77</td>
+      <td>0.73</td>
+      <td>0.47</td>
+      <td>0.43</td>
+      <td>0.38</td>
+    </tr>
+    <tr>
+      <th>Egalité</th>
+      <td>0.11</td>
+      <td>0.11</td>
+      <td>0.11</td>
+      <td>0.11</td>
+      <td>0.10</td>
+      <td>0.08</td>
+      <td>0.05</td>
+      <td>0.35</td>
+      <td>0.11</td>
+      <td>0.02</td>
+    </tr>
+    <tr>
+      <th>Défaite</th>
+      <td>0.26</td>
+      <td>0.25</td>
+      <td>0.24</td>
+      <td>0.23</td>
+      <td>0.20</td>
+      <td>0.15</td>
+      <td>0.22</td>
+      <td>0.18</td>
+      <td>0.45</td>
+      <td>0.60</td>
+    </tr>
+    <tr>
+      <th rowspan="3" valign="top">20</th>
+      <th>Victoire</th>
+      <td>0.76</td>
+      <td>0.76</td>
+      <td>0.77</td>
+      <td>0.78</td>
+      <td>0.80</td>
+      <td>0.85</td>
+      <td>0.86</td>
+      <td>0.82</td>
+      <td>0.55</td>
+      <td>0.51</td>
+    </tr>
+    <tr>
+      <th>Egalité</th>
+      <td>0.11</td>
+      <td>0.11</td>
+      <td>0.10</td>
+      <td>0.10</td>
+      <td>0.10</td>
+      <td>0.07</td>
+      <td>0.07</td>
+      <td>0.04</td>
+      <td>0.34</td>
+      <td>0.02</td>
+    </tr>
+    <tr>
+      <th>Défaite</th>
+      <td>0.13</td>
+      <td>0.13</td>
+      <td>0.12</td>
+      <td>0.12</td>
+      <td>0.10</td>
+      <td>0.08</td>
+      <td>0.07</td>
+      <td>0.14</td>
+      <td>0.11</td>
+      <td>0.47</td>
+    </tr>
+    <tr>
+      <th rowspan="3" valign="top">21</th>
+      <th>Victoire</th>
+      <td>0.88</td>
+      <td>0.89</td>
+      <td>0.89</td>
+      <td>0.89</td>
+      <td>0.90</td>
+      <td>0.93</td>
+      <td>0.93</td>
+      <td>0.94</td>
+      <td>0.89</td>
+      <td>0.64</td>
+    </tr>
+    <tr>
+      <th>Egalité</th>
+      <td>0.12</td>
+      <td>0.11</td>
+      <td>0.11</td>
+      <td>0.11</td>
+      <td>0.10</td>
+      <td>0.07</td>
+      <td>0.07</td>
+      <td>0.06</td>
+      <td>0.03</td>
+      <td>0.05</td>
+    </tr>
+    <tr>
+      <th>Défaite</th>
+      <td>0.00</td>
+      <td>-0.00</td>
+      <td>-0.00</td>
+      <td>-0.00</td>
+      <td>0.00</td>
+      <td>-0.00</td>
+      <td>-0.00</td>
+      <td>0.00</td>
+      <td>0.08</td>
+      <td>0.31</td>
+    </tr>
+    <tr>
+      <th rowspan="3" valign="top">A10</th>
+      <th>Victoire</th>
+      <td>1.00</td>
+      <td>1.00</td>
+      <td>1.00</td>
+      <td>1.00</td>
+      <td>1.00</td>
+      <td>1.00</td>
+      <td>1.00</td>
+      <td>1.00</td>
+      <td>0.92</td>
+      <td>0.69</td>
+    </tr>
+    <tr>
+      <th>Egalité</th>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.08</td>
+      <td>0.31</td>
+    </tr>
+    <tr>
+      <th>Défaite</th>
+      <td>0.00</td>
+      <td>-0.00</td>
+      <td>-0.00</td>
+      <td>-0.00</td>
+      <td>0.00</td>
+      <td>-0.00</td>
+      <td>-0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+    </tr>
+  </tbody>
+  <caption> <strong>Tableau 1.</strong> Calcul des probabilités \(\mathbb{P}(W_{n}), \mathbb{P}(E_{n}), \mathbb{P}(L_{n})\)</caption>
+</table>
+
+    <p>
+      <br /> 
+      Une meilleur façon de visualiser ce tableau est de calculer l'espérance de gain. Par exemple, on peut imaginer un joueur avec une mise de 1. Rappelons également
+      que la mise est multipliser par 1.5 lorsque le joueur obtient un Blackjack.
+      <br /> 
+      <br /> 
+
+    </p>
+
+    <figure style="text-align:center;">
+    <img src="{{ url_for('static', filename='images/heatmap_W0.png') }}" alt="Table de blackjack" width="700">
+      <figcaption> <strong>Figure 1.</strong>  Simulation des probabilités au blackjack</figcaption>
+    </figure>
+
+
+    <p>
+      <br /> 
+      On peut voir que l'espérance du joueur est négative pour tout score strictement en dessous de 18.
+    </p>
+
+
+
+  <h4 id="1.4"> I.4 Espérance de gain et stratégie du joueur</h3>
+
+    <p>
+      On introduit une nouvelle suite de variable aléatoire \((Y_n)_{n>0}\) représentant le gain du joueur pour une main donnée sans split. <br /> 
+      Soit \( \alpha \in \mathbb{R}^+\) la valeur monétaire de la mise, 
+      Le gain dépend uniquement des évenements \(W_n\) et \(E_n\), eux-mêmes fonction de \(\mathbf{H'}_n\) et \(\mathbf{D'}_\tau\). On définit pour tout  \(n >0\) : 
+
+      \[
+      Y_{n} = \alpha \  \mathbb{1}_{W_n \ \cap \ J_n^c} + \frac{3\alpha}{2} \ \mathbb{1}_{J_n} - \alpha \ \mathbb{1}_{(W_n \ \cup \ E_n)^c}
+      \quad \quad
+
+      Y_{n} : (\Omega, \mathcal{F}) \to (I, \mathcal{I})
+      \]
+       Avec le support 
+     \(
+    I = \alpha \cdot \{-2, -1, -\tfrac{1}{2}, 0, 1, \tfrac{3}{2}, 2\} 
+     \ \).
+    </p>
+
+
+
+    <p>
+
+    On peut aussi facilement déduire l'espérance de  \(Y_n\) à partir de son expression comme somme d'indicatrices :
+    
+     \[
+      \mathbb{E}[{Y_{n}}] = \alpha \  \mathbb{P}(W_n \ \cap \ J_n^c) + \frac{3\alpha}{2} \ \mathbb{P}(J_n) - \alpha \ \mathbb{P}((W_n \ \cup \ E_n)^c)
+     \]
+
+     Le joueur doit pour tout \(n >1\)  (i.e deux cartes en main), évaluer son espérance de gains pour tout tirage \(k >0\) sachant sa main et celle du croupier. Cela se traduit par : 
+
+     \[
+      \mathbb{E}[{Y_{n+k}} | \mathbf{H'}_n=i, \mathbf{C'}_1=j] = \frac{\mathbb{E}[{Y_{n+k}} \ \mathbb{1}_{\mathbf{H'}_n=i} \ \mathbb{1}_{\mathbf{D'}_1=j}  ]}
+      {\mathbb{P}(\mathbf{H'}_n=i, \mathbf{D'}_1=j)}
+     \]
+     
+    </p>
+   
+
+    <p>
+      Par la suite on notera de manière légèrement abusive lorsque nécessaire  \(Y_n(\mathbf{H'}_n, \mathbf{D'}_\tau).\) pour expliciter le fait \(Y_n\) dépénde de ces deux v.a. 
+      Intéressons nous maintenant sur le cas du split. Si le joueur split, ce dernier sépare sa main en deux. Son score est également divisé par deux, à l'exception de l'As ou le joueur passe d'un
+      score de 12 à 11. La main représenté par le vecteur aléatoire \(\mathbf{H}_n\) est alors remplacé par deux nouveaux vecteurs aléatoires :  \( {}_{1}\mathbf{H}_n \) et \( {}_{2}\mathbf{H}_n \)
+      avec chaque composantes de même lois pour \(N = +\infty\). On note \(Z_n\) la variable de gain engendré par le split et valant : 
+
+      \[
+        Z_n = Y_n({}_{1}\mathbf{H'}_n, \mathbf{D'}_\tau) = Y_n({}_{2}\mathbf{H'}_n, \mathbf{D'}_\tau)
+      \]
+
+    </p>
+
+    <p>
+
+      On introduit les quantitées suivantes à valeur dans \(\mathbb{R}\) et pour tout \(n > 0 \). Ces dernières reprèsentent l'espérance de gain pour respectivement les choix (lorsque ces derniers sont possibles) :
+      Stand, Tirer, Doubler, Abandonner. Dans les règles classique du Blackjack, doubler, abandonner ou splitter est autorisé seulement après distribution des deux cartes, pour cette raison on a
+      \(n=2\) nécessairement dans ces cas.
+
+
+      \begin{align*}
+      s_n &= \mathbb{E}[Y_{n}| \mathbf{H'}_n=i, \mathbf{C'}_1=j], \qquad \forall n \geq 2 \\[2mm]
+      t_n &= \max_{k>0} \mathbb{E}[Y_{n+k}| \mathbf{H'}_n=i, \mathbf{C'}_1=j], \qquad \forall n \geq 2 \\[2mm]
+      d_2 &= 2 \, \mathbb{E}[Y_{3}\, | \, \mathbf{H'}_2=i, \mathbf{C'}_1=j]  \\[1mm]
+      a_2 &= -\frac{\alpha}{2}
+      \end{align*}
+  
+    </p>
+
+    <p>
+      Pour l'espérance du split, il faut s'intéresser aux deux v.a engendrées. Dans le cas où un seul split est autorisé, le joueur doit évaluer l'esperance de gain 
+      des nouvelles mains à partir des choix de Stand, Tirer ou Doubler. Les deux v.a suivant la même loi \(Z_n\), et on note  :  
+      
+      \[
+        c_{1,2} = 2 \, \max\Bigg\{\mathbb{E}\Big[Z_{2} \,| \, {}_{1}\mathbf{H'}_1=i, \mathbf{C'}_1=j\Big] \ , 2 \, \mathbb{E}\Big[Z_{3} \,|\, {}_{1}\mathbf{H'}_1=i, \mathbf{C'}_1=j\Big] \ ,
+         \max_{k>0} \mathbb{E}\Big[Z_{2+k}\,|\, {}_{1}\mathbf{H'}_1=i, \mathbf{C'}_1=j\Big] \Bigg\}
+      \]
+
+      Si le joueur a le droit à plusieurs splits et toujours en supposant \(N = +\infty\), chaque splits entraine un \(Z_n\) de même loi. Si \(c_{1,n} > 0\), le joueur a tout intérêt à 
+      spliter autant que possible. L'espérance de gain est alors fonction de la probabilité des splits successifs \(p_i\). 
+      On peut alors montrer par récurrence pour \(n = 2\ \), 
+      pour tout \(k \in \mathbb{N}^*\) splits possibles et avec  \(c_{1,n} > 0\) :   
+
+
+      \begin{align*}
+  c_{k,2} 
+      &= c_{1,2} + \sum_{i=1}^{k} p_i\, c_{1,2} \\[3pt]
+      &= c_{1,2}\sum_{i=0}^{k} 
+        \left(\frac{1}{13}\,\mathbb{1}_{\{\,{}_{1}\mathbf{H}_{0,1}\neq 10\,\}}
+            + \frac{4}{13}\,\mathbb{1}_{\{\,{}_{1}\mathbf{H}_{0,1}=10\,\}}\right)^{\!i} \\[3pt]
+      &= c_{1,2}\!\left(
+          \frac{1 - \big(\tfrac{1}{13}\big)^{k+1}}{1 - \tfrac{1}{13}}\,
+          \mathbb{1}_{\{\,{}_{1}\mathbf{H}_{0,1}\neq 10\,\}}
+          + 
+          \frac{1 - \big(\tfrac{4}{13}\big)^{k+1}}{1 - \tfrac{4}{13}}\,
+          \mathbb{1}_{\{\,{}_{1}\mathbf{H}_{0,1}=10\,\}}
+        \right) \\[6pt]
+
+  \lim_{k\to +\infty} c_{k,2}
+      &= c_{1,2}\!\left(
+          \frac{13}{12}\,\mathbb{1}_{\{\,{}_{1}\mathbf{H}_{0,1}\neq 10\,\}}
+          + \frac{13}{9}\,\mathbb{1}_{\{\,{}_{1}\mathbf{H}_{0,1}=10\,\}}
+          \right).
+  \end{align*}
+
+    Si \(c_{1,2} < 0\), puisque \(  c_{k+1,2} - c_{k,2} < 0, \ \  \forall k \in \mathbb{N}^* \), le joueur n'a pas intérêt à multiplier les splits. On note alors \( p_{k,2}\) pour tout \(k  \in \mathbb{N}^*\), 
+    l'espérance conditionnelle du split :  
+
+    \[
+        p_{k,2} = \max(c_{1,2}, c_{k,2}) 
+      \]
+    
+    Il  est assez courant au Blackjack de définir des règles concernant le split. Certaines règles impose par exemple pour un split d'As un maximum de un tirage, ou ne pas doubler après le split, etc.
+
+    </p> 
+    
+    <p>
+        Nous avons déjà calculer dans la partie précédente \(s_n\) pour chaque couple \((\mathbf{H'}_n, \mathbf{D'}_1)\) cf. <b>Figure 1.</b>  <br />
+        Pour calculer \(t_n\),  \(d_2\) et \(p_{k,2}\) il faut étudier l'issue de la v.a  \( \mathbf{H'}_n\) à la suite des tirages. Pour cela, on construit la matrice de transition du joueur. 
+        Ce dernier à la possibilité de tirer jusqu'au score de 20, et s'arrête quoiqu'il arrive à 21.
+    </p>
+
+   <div class="pseudo-code">
+  choix ← max{\(s_n, t_n, d_n, p_n, a_n\)}
+
+  <b>SI</b> choix = \(t_n\) et tirage possible <b>ALORS</b>
+      Tirer
+  <b>SINON SI</b> choix = \(d_n\) et doublage possible <b>ALORS</b>
+      Doubler
+  <b>SINON SI</b> choix = \(p_n\) et split possible <b>ALORS</b>
+      Spliter
+  <b>SINON SI</b> choix = \(a_n\) et abandon possible <b>ALORS</b>
+      Abandonner
+  <b>SINON</b>
+      Stand
+   </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+
+</div>
+
+<form method="post">
+    <label for="n_games">Nombre de parties :</label>
+    <input type="number" name="n_games" value="1000">
+    
+    <label for="soft17">Croupier tire sur Soft 17 :</label>
+    <input type="checkbox" name="soft17" checked>
+    
+    <button type="submit">Lancer simulation</button>
+</form>
+
+{% if result %}
+<h3>Résultats :</h3>
+<ul>
+  <li>Nombre de parties : {{ result.n_games }}</li>
+  <li>Soft 17 activé : {{ result.soft17 }}</li>
+  <li>Espérance : {{ result.esperance }}</li>
+  <li>Victoires : {{ result.wins }}</li>
+  <li>Défaites : {{ result.losses }}</li>
+</ul>
+{% endif %}
+
+{% endblock %}
+

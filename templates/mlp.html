@@ -1,0 +1,760 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-container">
+
+
+  <div class="toc">
+    <h4>Sommaire</h4>
+    <ul>
+      <li><a href="#Presentation">Présentation du jeu et de ses règles</a></li>
+
+      <li class="collapsible">
+        <span class="arrow"></span>
+        <a href="#1">I. Définition formelle du processus</a>
+        <ul>
+          <li><a href="#1.1"> I.1 Suite de tirage de cartes dans un sabot fini et infini</a></li>
+          <li><a href="#1.2">I.2 Constitution de la main du joueur et du croupier</a></li>
+          <li><a href="#1.3">I.3 Fin de partie et gains du joueur</a></li>
+          <li><a href="#1.4">I.4 Propriétés de Markov et espérance de gains</a></li>
+        </ul>
+      </li>
+
+      <li class="collapsible">
+        <span class="arrow"></span>
+        <a href="#2">II. Probabilités d'états absorbants du croupier et espérance de Stand</a>
+        <ul>
+          <li><a href="#2.1">II.1 Résolution par calcul matriciel pour le cas \(N = +\infty\)</a></li>
+          <li><a href="#2.2"> II.2 Résolution  par programmation dynamique pour le cas \(N \in \mathbb{N}^*\)</a></li>
+        </ul>
+      </li>
+
+      <li class="collapsible">
+        <span class="arrow"></span>
+        <a href="#3">III. Processus de décision Markovien (PDM), stratégie d'arrêt du joueur, espérance de Hit et Split</a>
+        <ul>
+          <li><a href="#3.1">III.1 Définitions et propriétés</a></li>
+          <li><a href="#3.2">III.2 PDM pour le cas \(N = \infty\)</a></li>
+          <li><a href="#3.3">III.3 PDM pour le cas \(N \in \mathbb{N}^* \)</a></li>
+        </ul>
+      </li>
+
+      <li class="collapsible">
+        <span class="arrow"></span>
+        <a href="#4">IV. Espérance de gain à long terme, Ruine, Mise secondaire et comptage de cartes</a>
+        <ul>
+          <li><a href="#4.1">IV.1 Approximation des moments d'ordre 1 et 2, convergence et distribution</a></li>
+          <li><a href="#4.2">IV.2 Ruine et réussite du joueur</a></li>
+          <li><a href="#4.3">IV.3 Mise secondaire</a></li>
+          <li><a href="#4.4">IV.4 Comptage de cartes</a></li>
+
+        </ul>
+      </li>
+
+
+    </ul>
+  </div>
+
+
+  <div class="text-block">
+    <h1 id="intro">
+    Fonctionnement du MLP (Multi-Layer Perceptron)
+    <span class="subtitle">Formulation et implémentation</span>
+    </h1>
+
+    <div class="tags">
+      <span>#ChaînesAbsorbantes</span>
+      <span>#MDP</span>
+      <span>#EquationsdeBellman</span>
+      <span>#ProgrammationDynamique</span>
+      <span>#POO</span>
+      <span>#Monte-Carlo</span>
+      <span>#Python</span>
+    </div>
+
+    <p>
+      Les ANNs (Artificial Neural Networks), ou réseaux de neurones artificiels, sont des modèles de Machine Learning initialement inspirés du fonctionnement du cerveau humain et de ses neurones.
+      Ils constituent aujourd’hui le fondement du Deep Learning moderne et sont particulièrement adaptés à des tâches complexes nécessitant de traiter de très grands volumes de données. 
+      On les retrouve notamment dans les modèles génératifs tels que Claude ou GPT, en vision par ordinateur, ainsi que dans des systèmes de jeu comme AlphaGo de DeepMind, capable de jouer au Go à un niveau exceptionnel.
+    </p>
+
+    <p>
+      De nombreuses architectures de réseaux de neurones existent aujourd’hui, chacune adaptée à des types de problèmes spécifiques. 
+      Parmi les premières architectures développées figurent les MLP (Multi-Layer Perceptrons), qui constituent l’une des architectures fondamentales à l’origine des ANNs modernes.
+    </p>
+
+    <h2 id="1">I. Le Perceptron</h2>
+
+    <p>
+      Le perceptron constitue l'une des formes les plus simples de réseau de neurones artificiels (ANN) introduit par Rosenblatt (1958).
+      Il s'agit d'un simple neurone prenant en entrée un vecteur :
+      \[ \mathbf{x} = (x_0, \dots, x_d) \in \mathbb{R}^{d+1},  \]
+      composé de \(d \in \mathbb{N}^*\) variables d'entrée \(x_1, \dots, x_d\) , auxquelles s'ajoute une entrée constante \(x_0=1\).
+      Chaque \(x_i\) est associée à un poids, formant le vecteur : 
+      \[ \mathbf{w} = (w_0, \dots, w_d) \in \mathbb{R}^{d+1},  \]
+
+      Le couple \( (w_0, x_0) \) correspond respectivement au poids-biais et entrée de biais. 
+      
+      Le perceptron calcule une combinaison affine des entrées, à laquelle est appliquée
+      une fonction d'activation \( \sigma : \mathbb{R} \to \mathbb{R} \), telle que :
+      
+      \[
+        a = \sigma\left(\sum_{i=0}^{d} w_i x_i\right)
+        \tag{1}
+      \]
+       où \(a \in \mathbb{R}\) représente la sortie, du perceptron.
+      Dans le perceptron classique, la fonction d'activation est généralement une fonction seuil, que l'on peut définir par exemple par :
+
+      \(
+        \sigma(z) =
+        \begin{cases}
+          1 & \text{si } z \geq 0,\\
+          -1 & \text{sinon.}
+        \end{cases}
+      \)
+    </p>
+
+    
+    <figure style="text-align:center;">
+    <img src="{{ url_for('static', filename='images/mlp/perceptron.png') }}" alt="perceptron" width="280">
+      <figcaption> <strong>Figure 1.</strong> Représentation du perceptron</figcaption>
+    </figure>
+
+
+    <p>
+      <br>
+      Le perceptron peut ainsi être utiliser pour des tâches de classification binaire. 
+      On considère un jeu de données \((\mathbf{X}, \mathbf{y})\) de \(n\) observations et \(d\) variables tels que :    
+    </p>
+
+    <p>
+      \(
+        \mathbf{X} = 
+       \begin{pmatrix}
+        \mathbf{x}_1^T \\
+        \vdots \\
+        \mathbf{x}_n^T
+        \end{pmatrix}
+        \)
+         est la matrice de variables d'entrées de taille \(n \times (d+1) \), 
+      avec \(  \mathbf{x}_i \in \mathbb{R}^{d+1} \)  pour tout \( i  \in [\![1, n]\!]\).
+
+      <br>
+
+      \( \mathbf{y} \in \{-1,1\}^n \,  \) est le vecteur de labels des observations de taille \(n\), avec 
+      \(
+        \mathbf{y} = 
+       \begin{pmatrix}
+        y_1 \\
+        \vdots \\
+        y_n
+        \end{pmatrix}
+      \)
+       
+    </p>
+
+    <p>
+      L'ensemble \( \mathcal{S} = \{ (\mathbf{x}_1, y_1 ), \dots , (\mathbf{x}_n, y_n) \} \) est linéarement séparable i.e il existe un hyperplan séparant les deux 
+      classes de données.
+      Le vecteur de sortie prédit par le perceptron vaut : 
+      \[
+       a_{\mathbf{w}}(\mathbf{X}) = \sigma(\mathbf{X}  \mathbf{w} )
+      \tag{2}
+      \]
+      L'objectif d'apprentissage du perceptron est de déterminer \( \mathbf{w} \in \mathbf{R}^{d+1}\) minimisant 
+       la fonction de coût ou <i>loss function</i>. <br>
+       Cette fonction pénalise le modèle sur ses erreurs de prédictions. Cette dernière vaut pour le perceptron : 
+
+       \[ \mathcal{L}(\mathbf{w}) = \sum_{i=1}^n - y_i  \langle \mathbf{w} , \mathbf{x}_i \rangle
+        \mathbb{1}_{ y_i  \langle \mathbf{w} , \mathbf{x}_i \rangle \leq 0}
+        \tag{3}
+       
+       \]
+
+    </p>
+
+    <p>
+      L'algorithme de Rosenblatt de mise à jour des poids peut être résumé par : 
+
+    </p>
+
+<div class="pseudo-code">
+  <b>function</b> \(\text{updateWeights}(\mathbf{X}, \mathbf{y})\)
+      \(\mathbf{w} \leftarrow 0_{\mathbb{R^{d+1}}} \)
+      <b>while </b>\(\mathcal{L}(\mathbf{w}) > 0 \) :
+          <b>for each</b> \(i \in \{1,\dots, n\} \)
+            <b>if</b> \(  y_i  \langle \mathbf{w} , \mathbf{x}_i \rangle \leq 0  \) :
+              \(\mathbf{w} \leftarrow \mathbf{w} + y_i \mathbf{x}_i \)
+      <b>return</b> \(\mathbf{w}\)
+
+</div>
+      <div class="caption">
+    <strong>Algorithme 1.</strong> Apprentissage du perceptron
+  </div>
+
+    <p>
+      <br>
+      <b>Théorème de convergence de Novikoff. \(\quad \)</b> 
+
+      L'algorithme du perceptron converge si et seulement si \( \, \mathbf{S}\) est linéarement séparable.
+      De plus, le nombre d'iterations maximale est bornée par \( \, (R / \gamma)^2 \), tels que : 
+
+      \[
+       R = \max_{k \in [1,n]} \|\mathbf{x}_k\|, 
+      \quad \text{ et } \quad \gamma = \max_{\mathbf{w} \in \mathbb{R}^{d+1}} 
+      \min_{(\mathbf{x},y) \in \mathcal{S}} \left\{ \frac{y\langle \mathbf{w}, \mathbf{x}\rangle}{\|\mathbf{w}\|}\right\}
+      \tag{4}
+       \]
+      <br>
+    </p>
+
+    <p>
+      L'une des principales limites du perceptron est son incapacité à séparer des données qui ne sont pas linéairement séparables par un hyperplan. 
+      Un échantillon de données de type XOR suffit à entraîner une non-convergence de l'algorithme, et une précision de prédiction médiocre.
+    </p>
+
+    <figure style="text-align:center; margin-left:0;">
+        <img src="{{ url_for('static', filename='images/MLP/perceptron_xor.gif') }}" alt="Training perceptron" width="900">
+        <figcaption> <strong>Figure 2.</strong> Entraînement d'un perceptron sur un échantillon \( \mathcal{S} \) de type XOR</figcaption>
+        <br>
+      </figure>
+
+
+    <h2 id="2">II. Le Multi-Layer Perceptron</h2>
+
+    <h3 id="2.1">II.1 Architecture et expression de prediction du modèle</h3>
+
+
+    <p>
+        Un MLP est constitué de plusieurs couches de perceptrons. Cette succession de couches de neurones permet de s'affranchir de
+        l'hypothèse de séparabilité par hyperplan et de capter des relations bien plus complexes entre variables qu'un simple perceptron. 
+    </p>
+
+    <p>
+      On distingue 3 types de couches principales qui composent un MLP : 
+
+      <ul>
+        <li>
+           La couche d’entrée qui reçoit les données d'entrée du modèle. Chaque neurone de cette couche correspond à une variable ; 
+        <li>
+          La ou les couches cachées qui permettent au réseau d’apprendre des relations complexes entre variables d’entrée grâce à des transformations successives ;
+        </li>
+        <li>
+          La couche de sortie fournissant la prédiction du modèle : les neurones peuvent avoir une valeur numérique pour une régression ou une probabilité d'appartenance a une classe dans le cas de classification ; 
+        </li>
+      </ul>
+    </p>
+    
+
+    <figure style="text-align:center;">
+    <img src="{{ url_for('static', filename='images/mlp/mlp.png') }}" alt="mlp" width="600">
+      <figcaption> <strong>Figure 3.</strong> Exemple de MLP à 3 couches</figcaption>
+    </figure>
+
+    <p>
+      Dans l'exemple ci-dessus, le MLP comporte \(3\) couches de neurones. La première a \(2\) variables/neurones d'entrées et un neurone biais. Ces neurones sont connectés à la couche cachée, qui comporte \(4\) neurones d'activations et un biais. 
+      La dernière couche comporte \(3 \) neurones de sorties. Le nombre total de poids et poids-biais vaut quant à lui \( \, 3 * 4 + 5 * 3 = 27\)
+    </p>
+
+    
+
+    <p>
+      Une autre différence notable avec le perceptron concerne les fonctions d’activation. Le perceptron simple utilise une fonction seuil non dérivable, rendant impossible l'entraînement du modèle 
+      avec des méthodes type descente de gradient.
+      Les MLPs ont ensuite utilisé des fonctions d’activation dérivables, comme la sigmoïde, la tangente hyperbolique ou ReLU. 
+    </p>
+
+    <p>
+      L'expression de ces fonctions d'activations sont :
+      \[
+        \text{sigm}(x) = \frac{1}{1 + e^{-x}}, \qquad
+        \tanh(x) = \frac{e^{x} - e^{-x}}{e^{x} + e^{-x}}, \qquad
+        \text{ReLU}(x) = \max(0, x)
+      \]
+    </p>
+
+
+    <figure style="text-align:center;">
+    <img src="{{ url_for('static', filename='images/mlp/activations.png') }}" alt="activations" width="450">
+      <figcaption> <strong>Figure 4.</strong> Exemple de fonctions d'activation </figcaption>
+    </figure>
+
+    <p>
+      Les fonctions ci-dessus vont de \(\, \mathbb{R} \,\) dans \(\, \mathbb{R} \,\). Cependant, comme nous le verrons par la suite une fonction d'activation peut être définie
+      par  \(\, \sigma : \mathbb{R}^d \to \mathbb{R} \,\) et prendre en entrée un vecteur de taille \(d\).  
+    </p>
+
+
+
+    <p>
+      <br>
+        <b> Matrice de poids, récurrence entre couches et vecteur de sortie </b>
+    </p>
+    
+    <p>
+      Par la suite, on distinguera les poids-biais des poids hors-bais. 
+      Le terme "poids" désignera les poids n'étant pas relié à un biais, le terme "biais" désignera les poids relié aux biais. 
+    </p>
+
+
+    <p>
+      Soit un MLP de \( L \) couches de neurones, chacune de taille \( (d_1, d_2, \dots, d_L) \in \mathbb{N}^L \) correspondant au nombre de neurones hors-biais. <br> 
+      Le nombre total de poids \( n_w \) et de biais \( n_b \) vaut :
+      
+      \[
+        n_w = \sum_{l=2}^{L} d_{l-1}  \times d_{l}, \qquad n_b = \sum_{l=2}^{L} d_{l}.
+        \tag{5}
+      \]\
+    </p>
+
+    <p>
+      Soit \( l \in [\![1, L]\!] \), on définit le vecteur des neurones hors-biais de la \(l\)-ième couche, de taille \(d_l\), par 
+      \[
+        \mathbf{a}^{(l)} = 
+        \begin{pmatrix}
+          a_1^{(l)} \\
+          \vdots \\
+          a_{d_l}^{(l)}
+        \end{pmatrix},
+      \]
+    </p>
+
+    <p>
+      Soit \( l \in [\![2, L]\!] \), on définit la matrice de poids \(\, W^{(l)} \, \) et le vecteur de biais \(\mathbf{b}^{(l)}\)
+       reliant la couche \(l-1\) à la couche \(l\), respectivement de dimensions \( \, d_{l} \times d_{l-1} \, \) et  \( \, d_{l}\) :
+      \[
+        \mathbf{W}^{(l)} =
+        \begin{pmatrix}
+          w_{1,1}^{(l)} & w_{1,2}^{(l)} & \cdots & w_{1,d_{l-1}}^{(l)} \\
+          w_{2,1}^{(l)} & w_{2,2}^{(l)} & \cdots & w_{2,d_{l-1}}^{(l)} \\
+          \vdots        & \vdots        & \ddots & \vdots        \\
+          w_{d_{l},1}^{(l)} & w_{d_{l},2}^{(l)} & \cdots & w_{d_{l},d_{l-1}}^{(l)}
+        \end{pmatrix},
+        \qquad
+        \mathbf{b}^{(l)} = 
+        \begin{pmatrix}
+          b_1^{(l)} \\
+          b_2^{(l)} \\
+          \vdots \\
+          b_{d_{l}}^{(l)}
+        \end{pmatrix}.
+      \]
+    </p>
+
+    <p>
+      La propagation d'une couche à l'autre s'écrit alors pour tout \( l \in [\![2, L]\!] \) :
+      \[
+        \mathbf{a}^{(l)} = \boldsymbol{\sigma}^{(l)}\big(\mathbf{W}^{(l)} \mathbf{a}^{(l-1)} + \mathbf{b}^{(l)}\big),
+        \tag{6}
+      \]
+      
+      où \(\boldsymbol{\sigma}^{(l)} : \mathbb{R}^{d_l} \to \mathbb{R}^{d_l}\) est la fonction d'activation vectorielle d'une couche \( l \in [\![2, L]\!] \), telle que :
+      \[
+        \boldsymbol{\sigma}^{(l)}(\mathbf{z}) = 
+        \begin{pmatrix}
+          \sigma_1^{(l)}(\mathbf{z}) \\
+          \vdots \\
+          \sigma_{d_{l}}^{(l)}(\mathbf{z})
+        \end{pmatrix},
+        \qquad
+        \mathbf{z} = 
+        \begin{pmatrix}
+          z_1 \\
+          \vdots \\
+          z_{d_l}
+        \end{pmatrix},
+
+
+      \]
+      chaque \( \, \sigma_i^{(l)} : \mathbb{R}^{d_l} \to \mathbb{R} \,\). Dans beaucoup de cas, comme pour les fonctions vues précédemment : ReLU, sigmoïde, tanh,
+      les fonctions d'activations ne dépendent que de leur composante \(z_i\) avec 
+      \( \, \dfrac{\partial \sigma_i^{(l)}}{\partial z_j} = \dfrac{\partial a_i^{(l)}}{\partial z_j} = 0 \, \) 
+      lorsque \( \, i \neq j \, \)
+
+      pour tout \( i \in [\![1, d_l]\!] \, \) et \( \, l \in [\![2, L]\!] \)  
+     
+    </p>
+
+   
+
+    <figure style="text-align:center;">
+    <img src="{{ url_for('static', filename='images/mlp/illustration_poids.png') }}" alt="illustration_poids" width="350">
+      <figcaption> <strong>Figure 5.</strong> Représentation de certains biais, poids et neurones </figcaption>
+    </figure>
+
+    <p>
+      <br>
+      L'équation \((6)\) permet de déduire par récurrence l'expression du vecteur de sortie \( \,  \mathbf{a}^{(L)} \,  \) comme fonction du vecteur d'entrée \( \,  \mathbf{a}^{(1)} \,  \) : 
+      \[
+         \mathbf{a}^{(L)} = f^{(L)} \, \circ \, f^{(L-1)} \, \circ \, \dots \circ \, f^{(2)} \big( \mathbf{a}^{(1)} \big),
+         \tag{7} 
+      \]
+
+      avec pour tout \( l \in [\![1, L-1]\!] \)
+      \[
+        f^{(l+1)}\big( \mathbf{a}^{(l)} \big) = \boldsymbol{\sigma}^{(l+1)}\big(W^{(l+1)} \mathbf{a}^{(l)} + \mathbf{b}^{(l+1)}\big).
+      \]
+    </p>
+
+    <h3 id="2.2">II.2 Entrainement du MLP </h3>
+
+    <p>
+        <b> Descente de gradient </b>
+    </p>
+
+    <p>
+      Comme pour le perceptron, l'objectif du modèle est de déterminer l'ensemble des poids et biais \( \, (\mathbf{W}^{(l)}, \mathbf{b}^{(l)}) \,  \) pour tout  \( l \in [\![2, L]\!] \),  
+      minimisant une fonction de coût \( \,  \mathcal{L} \, \). Pour \( N \in \mathbb{N}^*\) observations servant à l'entraînement, on a :  
+      \[
+      \mathcal{L} =  \frac{1}{N} \sum_{n=1}^N \mathcal{L}_n,
+      \tag{8} 
+      \]
+
+       où les \(\, \mathcal{L}_n \, \) sont les fonctions de coût individuels appliquée à une observation. 
+
+      La méthode d'optimisation de référence des ANN repose sur la descente de gradient. 
+    </p>
+
+    <p>
+
+    </p>
+    
+    <p>
+      Pour tout \( l \in [\![2, L]\!] \), on définit le gradient de \(\mathcal{L}\) par rapport aux poids et biais de la couche \(l\), respectivement de mêmes dimensions que \(W^{(l)}\) et \(\mathbf{b}^{(l)}\) :
+      \[
+        \nabla_{W^{(l)}} \mathcal{L} = 
+        \begin{pmatrix}
+          \dfrac{\partial \mathcal{L}}{\partial w_{1,1}^{(l)}} & \cdots & \dfrac{\partial \mathcal{L}}{\partial w_{1,d_{l-1}}^{(l)}} \\
+          \vdots & \ddots & \vdots \\
+          \dfrac{\partial \mathcal{L}}{\partial w_{d_{l},1}^{(l)}} & \cdots & \dfrac{\partial \mathcal{L}}{\partial w_{d_{l},d_{l-1}}^{(l)}}
+        \end{pmatrix}
+        \in \mathbb{R}^{d_{l} \times d_{l-1}},
+        \qquad
+        \nabla_{\mathbf{b}^{(l)}} \mathcal{L} = 
+        \begin{pmatrix}
+          \dfrac{\partial \mathcal{L}}{\partial b_1^{(l)}} \\
+          \vdots \\
+          \dfrac{\partial \mathcal{L}}{\partial b_{d_{l}}^{(l)}}
+        \end{pmatrix}
+        \in \mathbb{R}^{d_{l}}.
+      \]
+    </p>
+
+    <p>
+      Le gradient complet de \(\mathcal{L}\) sur l'ensemble des paramètres du réseau est alors la collection de ces gradients sur toutes les couches :
+      \[
+        \nabla \mathcal{L} = \Big( \nabla_{W^{(l)}} \mathcal{L}, \; \nabla_{\mathbf{b}^{(l)}} \mathcal{L} \Big)_{l=2}^{L} \; \in \; \mathbb{R}^{n_w + n_b}.
+      \]
+     
+    </p>
+
+    <p>
+      La descente de gradient met à jour, à chaque itération \(t\), l'ensemble des poids et biais du MLP dans la direction opposée au gradient, en se rapprochant d'un minimum local de \(\mathcal{L}\). 
+      Pour tout \( l \in [\![2, L]\!] \) :
+      \[
+        W^{(l)}_{t+1} = W^{(l)}_{t} - \eta \, \nabla_{W^{(l)}} \mathcal{L}, 
+        \qquad
+        \mathbf{b}^{(l)}_{t+1} = \mathbf{b}^{(l)}_{t} - \eta \, \nabla_{\mathbf{b}^{(l)}} \mathcal{L},
+        \tag{9}
+      \]
+      où \(\eta > 0\) est le taux d'apprentissage, les gradients étant évalués aux valeurs courantes \(W^{(l)}_{t}\) et \(\mathbf{b}^{(l)}_{t}\). En regroupant l'ensemble des paramètres sous la forme 
+      \( \, \theta = \big(W^{(l)}, \mathbf{b}^{(l)}\big)_{l=2}^{L} \, \), cette mise à jour s'écrit plus simplement :
+      \[
+        \theta_{t+1} = \theta_t - \eta \, \nabla \mathcal{L}(\theta_t).
+        \tag{10}
+      \]
+    </p>
+
+    <p>
+      En pratique, calculer \(\nabla \mathcal{L}\) sur l'ensemble des \(n\) observations à chaque itération est coûteux, en particulier lorsque \(n\) est grand. On utilise alros généralement une estimation du gradient calculée 
+      sur un sous-ensemble \(\mathcal{B}_t \subset [\![1, N]\!]\) d'observations tiré à l'itération \(t\), appelé « batch », de taille \(|\mathcal{B}_t| \leq N\). La fonction de coût batch s'écrit alors :
+      \[
+        \mathcal{L}_{\mathcal{B}_t} = \frac{1}{|\mathcal{B}_t|} \sum_{n \in \mathcal{B}_t} \mathcal{L}_n,
+        \tag{11}
+      \]
+      et la mise à jour des paramètres \( (9)-(10) \) devient :
+      \[
+        W^{(l)}_{t+1} = W^{(l)}_{t} - \eta \, \nabla_{W^{(l)}} \mathcal{L}_{\mathcal{B}_t}, 
+        \qquad
+        \mathbf{b}^{(l)}_{t+1} = \mathbf{b}^{(l)}_{t} - \eta \, \nabla_{\mathbf{b}^{(l)}} \mathcal{L}_{\mathcal{B}_t},
+        \tag{12}
+      \]
+      soit, avec la notation compacte : \( \, \theta_{t+1} = \theta_t - \eta \, \nabla \mathcal{L}_{\mathcal{B}_t}(\theta_t) \, \). On parle alors de descente de gradient stochastique.
+     
+    </p>
+
+
+    <p>
+      <br>
+      <br>
+        <b> Calcul du gradient via backprogation </b>
+        <br>
+        <br>
+    </p>
+
+    <p>
+      Soit \( \, (j,k,l) \in [\![1, d_{l}]\!] \times [\![1, d_{l-1}]\!] \times [\![2, L]\!] \, \).
+    </p>
+
+    <p>
+      L'objectif est de trouver 
+      les valeurs de \( \, \dfrac{\partial \mathcal{L}_{\mathcal{B}_t}}{\partial w_{j,k}^{(l)}} \,  \) ainsi que de  
+      \( \, \dfrac{\partial \mathcal{L}_{\mathcal{B}_t}}{\partial b_{j}^{(l)}} \,  \) pour tout batch \( \mathcal{B}_t \subset [\![1, N]\!] \) donné. On note de plus : 
+
+    </p>
+
+    <p>
+      \[  a^{(l)}_{j,n} = \sigma_j^{(l)} \Big( \mathbf{z}^{(l)}_{n} \Big) 
+      \]
+
+      \[  \mathbf{z}^{(l)}_{n} = (z^{(l)}_{1,n} \quad z^{(l)}_{2,n} \quad \dots \quad z^{(l)}_{d_l,n})^T
+      \]
+
+      \[
+        z_{j,n}^{(l)} = w_{j,1}^{(l)} \, a_{1,n}^{(l-1)} + \dots + w_{j,k}^{(l)} \, a_{k,n}^{(l-1)} + \dots + w_{j,d_{l-1}}^{(l)} \, a_{d_{l-1},n}^{(l-1)} + b_j^{(l)},
+      \]
+
+      avec \( \,  a^{(l)}_{j,n} \, \)la valeur du \(\, j-\)ième neurone de la couche \( l  \) pour l'observation \(n \). <br>
+       On a tout d'abord que : 
+      \[
+         \dfrac{\partial \mathcal{L}_{\mathcal{B}_t}}{\partial w_{j,k}^{(l)}} = 
+         \frac{1}{|\mathcal{B}_t|} \sum_{n \in \mathcal{B}_t}  \dfrac{\partial \mathcal{L}_{n}}{\partial w_{j,k}^{(l)}}, 
+         \qquad \quad 
+         \dfrac{\partial \mathcal{L}_{\mathcal{B}_t}}{\partial b_{j}^{(l)}} = 
+         \frac{1}{|\mathcal{B}_t|} \sum_{n \in \mathcal{B}_t}  \dfrac{\partial \mathcal{L}_{n}}{\partial b_{j}^{(l)}}, 
+
+          \tag{13}
+      \]
+
+      avec : 
+
+      \[
+        \dfrac{\partial \mathcal{L}_{n}}{\partial w_{j,k}^{(l)}} = \dfrac{\partial \mathcal{L}_{n}}{\partial z_{j,n}^{(l)}} . \, \dfrac{\partial z_{j,n}^{(l)}}{\partial w_{j,k}^{(l)}}
+        =  \dfrac{\partial \mathcal{L}_{n}}{\partial z_{j,n}^{(l)}} \, . \, a_{k,n}^{(l-1)},
+        \qquad \quad 
+         \dfrac{\partial \mathcal{L}_{n}}{\partial b_{j}^{(l)}} = \dfrac{\partial \mathcal{L}_{n}}{\partial z_{j,n}^{(l)}} . \, \dfrac{\partial z_{j,n}^{(l)}}{\partial b_{j}^{(l)}}
+        =  \dfrac{\partial \mathcal{L}_{n}}{\partial z_{j,n}^{(l)}}.
+        \tag{14}
+      \]
+
+    </p>
+
+
+    <p>
+      <br>
+      Prenons \(\,  l = L \, \), on a que  \( \, a_{j,n}^{(L)} = \sigma^{(L)}\big( \mathbf{z}^{(l)}_{n} \big) \, \) est directement une composante de la sortie du réseau, dont dépend \( \mathcal{L}_n \). 
+      Par dérivation de fonctions composées, on a  :
+      \[
+         \dfrac{\partial \mathcal{L}_{n}}{\partial z_{j,n}^{(L)}} 
+        = \sum_{i=1}^{d_l} \dfrac{\partial \mathcal{L}_{n}}{\partial a_{i,n}^{(L)}} \cdot \dfrac{\partial a_{i,n}^{(L)}}{\partial z_{j,n}^{(L)}}
+        \tag{15}
+      \]
+      
+    </p>
+
+    <p>
+      De plus, dans le cas particulier d'une fonction d'activation ne dépendant que d'une composante i.e,  
+      \( a_{j,n}^{(L)} \) ne dépend que de \( z_{j,n}^{(L)} \)
+        
+      :  
+      \[
+         \dfrac{\partial \mathcal{L}_{n}}{\partial z_{j,n}^{(L)}} 
+        = \dfrac{\partial \mathcal{L}_{n}}{\partial a_{j,n}^{(L)}} \cdot \dfrac{\partial a_{j,n}^{(L)}}{\partial z_{j,n}^{(L)}}
+        = \dfrac{\partial \mathcal{L}_{n}}{\partial a_{j,n}^{(L)}} \cdot \sigma'^{(L)}\big(z_{j,n}^{(L)}\big).
+       
+      \]
+    </p>
+
+    <p>
+      \(\mathcal{L}_{n}\) est toujours fonction des neurones de sorties i.e on peut toujours déterminer 
+      \( \,  \dfrac{\partial \mathcal{L}_{n}}{\partial a_{i,n}^{(L)}} \, \) pour tout \(i \in [\![1, d_{l}]\!]\). <br>
+       Egalement, 
+      \( \, \dfrac{\partial a_{i,n}^{(L)}}{\partial z_{j,n}^{(L)}} \,  \) est aussi facilement déterminable car 
+      \(  a_{i,n}^{(L)} \) est toujours fonction des \(  z_{j,n}^{(L)}\) pour tout \( (i,j) \in [\![1, d_{l}]\!] \times [\![1, d_{l}]\!] \).
+    </p>
+
+    <p>
+      On a ainsi tous les éléments permettant de déterminer 
+      \( \, \dfrac{\partial \mathcal{L}_{\mathcal{B}_t}}{\partial w_{j,k}^{(L)}} \,  \) et
+      \( \, \dfrac{\partial \mathcal{L}_{\mathcal{B}_t}}{\partial b_{j}^{(L)}} \,  \), 
+      via \( \, (13), (14), (15). \)
+    </p>
+
+    <p>
+      <br>
+      Prenons \( l \in [\![2, L-1]\!] \). On a de la même manière que précédemment par dérivation de fonctions composées : 
+
+      \[
+      \begin{aligned}
+      \dfrac{\partial \mathcal{L}_{n}}{\partial z_{j,n}^{(l)}}
+      &= \sum_{i=1}^{d_{l+1}} \dfrac{\partial \mathcal{L}_{n}}{\partial z_{i,n}^{(l+1)}} \cdot \dfrac{\partial z_{i,n}^{(l+1)}}{\partial z_{j,n}^{(l)}} \\[2mm]
+      &= \sum_{i=1}^{d_{l+1}} \dfrac{\partial \mathcal{L}_{n}}{\partial z_{i,n}^{(l+1)}} \cdot \sum_{m=1}^{d_l} \dfrac{\partial z_{i,n}^{(l+1)}}{\partial a_{m,n}^{(l)}} \cdot \dfrac{\partial a_{m,n}^{(l)}}{\partial z_{j,n}^{(l)}} \\[2mm]
+      &= \sum_{i=1}^{d_{l+1}} \dfrac{\partial \mathcal{L}_{n}}{\partial z_{i,n}^{(l+1)}} \cdot \sum_{m=1}^{d_l} w_{i,m}^{(l+1)} \cdot \dfrac{\partial a_{m,n}^{(l)}}{\partial z_{j,n}^{(l)}} \\[2mm]
+      &= \sum_{i=1}^{d_{l+1}} \sum_{m=1}^{d_l} w_{i,m}^{(l+1)}  \cdot \dfrac{\partial a_{m,n}^{(l)}}{\partial z_{j,n}^{(l)}} \cdot \dfrac{\partial \mathcal{L}_{n}}{\partial z_{i,n}^{(l+1)}}
+      \end{aligned}
+      \]
+    </p>
+
+    <p>
+      Puisque nous avons exprimer \( \, \dfrac{\partial \mathcal{L}_{n}}{\partial z_{j,n}^{(L)}} \, \), nous pouvons déterminer 
+      \( \, \dfrac{\partial \mathcal{L}_{n}}{\partial z_{j,n}^{(L-1)}} \, \) puis \( \, \dfrac{\partial \mathcal{L}_{n}}{\partial z_{j,n}^{(l)}} \, \)
+       pour tout  \( \, l \in  [\![2, L-1]\!] \, \)  
+       par récurrence. On peut alors déterminer les gradients \( \, \nabla_{W^{(l)}} \mathcal{L}_{\mathcal{B}_t} \, \) 
+       et \(  \, \nabla_{\mathbf{b}^{(l)}} \mathcal{L}_{\mathcal{B}_t} \, \) à partir de 
+       \( \, \nabla_{W^{(l+1)}} \mathcal{L}_{\mathcal{B}_t} \, \) et \( \, \nabla_{\mathbf{b}^{(l+1)}} \mathcal{L}_{\mathcal{B}_t} \, \)
+       Cette relation de récurrence permettant de calculer les gradients se nomme la <b>backpropagation</b> en référence au fait que l'on calcule
+       les gradients couche par couche, en partant de la dernière couche \(L\).
+    </p>
+
+    
+    <p>
+      .
+    </p>
+
+    <p>
+      .
+    </p>
+
+    <p>
+      Pour \(\,  l = L \, \), on a que  \( \, a_{j,n}^{(L)} = \sigma^{(L)}\big( \mathbf{z}^{(l)}_{n} \big) \, \) est directement une composante de la sortie du réseau, dont dépend \( \mathcal{L}_n \). Par la règle de la chaîne, on a  :
+      
+      Le terme \( \dfrac{\partial \mathcal{L}_{n}}{\partial a_{j,n}^{(L)}} \) dépend uniquement du choix de la fonction de coût, et non de l'architecture du réseau. Par exemple, pour une perte quadratique \( \mathcal{L}_n = \frac{1}{2} \sum_{j=1}^{d_L} \big(a_{j,n}^{(L)} - y_{j,n}\big)^2 \), on obtient \( \dfrac{\partial \mathcal{L}_{n}}{\partial a_{j,n}^{(L)}} = a_{j,n}^{(L)} - y_{j,n} \).
+      <br><br>
+      <i>Remarque :</i> l'égalité \((16)\) repose sur l'hypothèse, posée en II.1, que \(\sigma^{(L)}\) agit composante par composante (\( a_{j,n}^{(L)} \) ne dépend que de \( z_{j,n}^{(L)} \)). Ce n'est plus le cas pour une activation comme le softmax, où \( a_{j,n}^{(L)} \) dépend de <i>tous</i> les \( z_{i,n}^{(L)} \) : \((16)\) devrait alors être remplacée par une somme faisant intervenir la matrice jacobienne complète de \(\boldsymbol{\sigma}^{(L)}\).
+    </p>
+
+    <p>
+      <br>
+      <b> Récurrence : erreur des couches cachées </b>
+    </p>
+
+    <p>
+      Pour \( l \in [\![2, L-1]\!] \), le neurone \(j\) de la couche \(l\) n'intervient pas directement dans \( \mathcal{L}_n \), mais l'influence uniquement à travers sa contribution à <i>tous</i> les neurones de la couche suivante \( l+1 \) (puisque \( a_{j,n}^{(l)} \) apparaît dans chaque \( z_{i,n}^{(l+1)} \), pour \( i \in [\![1, d_{l+1}]\!] \)). La règle de la chaîne, appliquée cette fois à plusieurs variables intermédiaires, donne :
+      \[
+        \delta_{j,n}^{(l)} = \dfrac{\partial \mathcal{L}_{n}}{\partial z_{j,n}^{(l)}} 
+        = \sum_{i=1}^{d_{l+1}} \dfrac{\partial \mathcal{L}_{n}}{\partial z_{i,n}^{(l+1)}} \cdot \dfrac{\partial z_{i,n}^{(l+1)}}{\partial z_{j,n}^{(l)}} 
+        = \sum_{i=1}^{d_{l+1}} \delta_{i,n}^{(l+1)} \cdot \dfrac{\partial z_{i,n}^{(l+1)}}{\partial z_{j,n}^{(l)}}.
+      \]
+    </p>
+
+    <p>
+      Or \(z_{i,n}^{(l+1)}\) dépend de \(z_{j,n}^{(l)}\) uniquement via \(a_{j,n}^{(l)} = \sigma^{(l)}\big(z_{j,n}^{(l)}\big)\), donc à nouveau par la règle de la chaîne :
+      \[
+        \dfrac{\partial z_{i,n}^{(l+1)}}{\partial z_{j,n}^{(l)}} = \dfrac{\partial z_{i,n}^{(l+1)}}{\partial a_{j,n}^{(l)}} \cdot \dfrac{\partial a_{j,n}^{(l)}}{\partial z_{j,n}^{(l)}} = w_{i,j}^{(l+1)} \cdot \sigma'^{(l)}\big(z_{j,n}^{(l)}\big),
+      \]
+      puisque \(z_{i,n}^{(l+1)} = \sum_{k=1}^{d_l} w_{i,k}^{(l+1)} a_{k,n}^{(l)} + b_i^{(l+1)}\), et que seul le terme \(k=j\) dépend de \(a_{j,n}^{(l)}\).
+    </p>
+
+    <p>
+      En combinant les deux dernières égalités, on obtient la relation de récurrence centrale de la rétropropagation, pour tout \( l \in [\![2, L-1]\!] \) :
+      \[
+        \delta_{j,n}^{(l)} = \sigma'^{(l)}\big(z_{j,n}^{(l)}\big) \sum_{i=1}^{d_{l+1}} w_{i,j}^{(l+1)} \, \delta_{i,n}^{(l+1)}.
+        \tag{17}
+      \]
+    </p>
+
+    <p>
+      Cette formule justifie le terme de « rétropropagation » : l'erreur \( \delta^{(l)} \) d'une couche se calcule à partir de l'erreur \( \delta^{(l+1)} \) de la couche suivante, ce qui impose de parcourir le réseau <i>à rebours</i>, de la couche de sortie \(L\) (via le cas de base \((16)\)) jusqu'à la première couche cachée, en appliquant \((17)\) à chaque étape.
+    </p>
+
+    <p>
+      <br>
+      <b> Écriture vectorielle </b>
+    </p>
+
+    <p>
+      En notant \( \boldsymbol{\delta}_n^{(l)} = \big(\delta_{1,n}^{(l)}, \dots, \delta_{d_l,n}^{(l)}\big)^T \in \mathbb{R}^{d_l} \) le vecteur des erreurs de la couche \(l\) pour l'observation \(n\), et \( \odot \) le produit de Hadamard (produit terme à terme), les relations \((16)\) et \((17)\) se réécrivent sous forme matricielle :
+      \[
+        \boldsymbol{\delta}_n^{(L)} = \nabla_{\mathbf{a}^{(L)}} \mathcal{L}_n \; \odot \; \boldsymbol{\sigma}'^{(L)}\big(\mathbf{z}_n^{(L)}\big),
+        \qquad
+        \boldsymbol{\delta}_n^{(l)} = \Big( \big(W^{(l+1)}\big)^{T} \boldsymbol{\delta}_n^{(l+1)} \Big) \odot \boldsymbol{\sigma}'^{(l)}\big(\mathbf{z}_n^{(l)}\big), \quad l \in [\![2,L-1]\!],
+        \tag{18}
+      \]
+      où \( \nabla_{\mathbf{a}^{(L)}} \mathcal{L}_n = \Big( \frac{\partial \mathcal{L}_n}{\partial a_{1,n}^{(L)}}, \dots, \frac{\partial \mathcal{L}_n}{\partial a_{d_L,n}^{(L)}} \Big)^T\), et \(\boldsymbol{\sigma}'^{(l)}\big(\mathbf{z}_n^{(l)}\big)\) est le vecteur des dérivées de l'activation évaluées composante par composante. On retrouve ici la matrice de poids \(W^{(l+1)}\), transposée, qui « propage » l'erreur en sens inverse de la propagation avant \((6)\).
+    </p>
+
+    <p>
+      <br>
+      <b> Gradient final sur le batch </b>
+    </p>
+
+    <p>
+      Il ne reste plus qu'à substituer \((15)\) dans l'expression du gradient batch pour obtenir, pour tout \( l \in [\![2, L]\!] \), \( j \in [\![1,d_l]\!] \) et \( k \in [\![1,d_{l-1}]\!] \) :
+      \[
+        \dfrac{\partial \mathcal{L}_{\mathcal{B}_t}}{\partial w_{j,k}^{(l)}} = \frac{1}{m} \sum_{n \in \mathcal{B}_t} \delta_{j,n}^{(l)} \, a_{k,n}^{(l-1)},
+        \qquad
+        \dfrac{\partial \mathcal{L}_{\mathcal{B}_t}}{\partial b_{j}^{(l)}} = \frac{1}{m} \sum_{n \in \mathcal{B}_t} \delta_{j,n}^{(l)},
+        \tag{19}
+      \]
+      soit, sous forme matricielle, en notant \( \mathbf{a}_n^{(l-1)} \) le vecteur d'activation de la couche \(l-1\) pour l'observation \(n\) :
+      \[
+        \nabla_{W^{(l)}} \mathcal{L}_{\mathcal{B}_t} = \frac{1}{m} \sum_{n \in \mathcal{B}_t} \boldsymbol{\delta}_n^{(l)} \, \big(\mathbf{a}_n^{(l-1)}\big)^{T},
+        \qquad
+        \nabla_{\mathbf{b}^{(l)}} \mathcal{L}_{\mathcal{B}_t} = \frac{1}{m} \sum_{n \in \mathcal{B}_t} \boldsymbol{\delta}_n^{(l)}.
+        \tag{20}
+      \]
+    </p>
+
+    <p>
+      On retrouve bien les dimensions attendues : \( \boldsymbol{\delta}_n^{(l)} \in \mathbb{R}^{d_l} \) et \( \mathbf{a}_n^{(l-1)} \in \mathbb{R}^{d_{l-1}} \), donc \( \boldsymbol{\delta}_n^{(l)} \big(\mathbf{a}_n^{(l-1)}\big)^{T} \in \mathbb{R}^{d_l \times d_{l-1}} \), ce qui correspond bien à la dimension de \( W^{(l)} \) et de son gradient.
+    </p>
+
+    <p>
+      <br>
+      <b> Algorithme de rétropropagation </b>
+    </p>
+
+    <p>
+      L'ensemble de la procédure, pour un batch \( \mathcal{B}_t \) donné, se résume ainsi en deux passes :
+    </p>
+
+<div class="pseudo-code">
+  <b>function</b> \(\text{backpropagation}(\mathcal{B}_t, (W^{(l)}, \mathbf{b}^{(l)})_{l=2}^{L})\)
+      <b>for each</b> \( n \in \mathcal{B}_t \) :
+          \( \mathbf{a}_n^{(1)} \leftarrow \mathbf{x}_n \)
+          <b># Passe avant</b>
+          <b>for</b> \( l = 2 \) <b>to</b> \( L \) :
+              \( \mathbf{z}_n^{(l)} \leftarrow W^{(l)} \mathbf{a}_n^{(l-1)} + \mathbf{b}^{(l)} \)
+              \( \mathbf{a}_n^{(l)} \leftarrow \boldsymbol{\sigma}^{(l)}\big(\mathbf{z}_n^{(l)}\big) \)
+          <b># Passe arrière</b>
+          \( \boldsymbol{\delta}_n^{(L)} \leftarrow \nabla_{\mathbf{a}^{(L)}} \mathcal{L}_n \odot \boldsymbol{\sigma}'^{(L)}\big(\mathbf{z}_n^{(L)}\big) \)
+          <b>for</b> \( l = L-1 \) <b>downto</b> \( 2 \) :
+              \( \boldsymbol{\delta}_n^{(l)} \leftarrow \big( (W^{(l+1)})^{T} \boldsymbol{\delta}_n^{(l+1)} \big) \odot \boldsymbol{\sigma}'^{(l)}\big(\mathbf{z}_n^{(l)}\big) \)
+      <b>for</b> \( l = 2 \) <b>to</b> \( L \) :
+          \( \nabla_{W^{(l)}} \mathcal{L}_{\mathcal{B}_t} \leftarrow \dfrac{1}{m} \sum_{n \in \mathcal{B}_t} \boldsymbol{\delta}_n^{(l)} \big(\mathbf{a}_n^{(l-1)}\big)^{T} \)
+          \( \nabla_{\mathbf{b}^{(l)}} \mathcal{L}_{\mathcal{B}_t} \leftarrow \dfrac{1}{m} \sum_{n \in \mathcal{B}_t} \boldsymbol{\delta}_n^{(l)} \)
+      <b>return</b> \( \big(\nabla_{W^{(l)}} \mathcal{L}_{\mathcal{B}_t}, \nabla_{\mathbf{b}^{(l)}} \mathcal{L}_{\mathcal{B}_t}\big)_{l=2}^{L} \)
+</div>
+  <div class="caption">
+    <strong>Algorithme 2.</strong> Rétropropagation du gradient sur un batch
+  </div>
+
+    <p>
+      Les gradients obtenus sont ensuite directement injectés dans la règle de mise à jour \((9)\)-\((10)\) pour faire progresser la descente de gradient stochastique.
+    </p>
+   
+
+
+
+</div>
+
+
+  
+
+
+<script>
+document.querySelectorAll('.toc .collapsible').forEach(item => {
+  const arrow = item.querySelector('.arrow');
+  if (arrow) {
+    arrow.addEventListener('click', e => {
+      e.stopPropagation(); // empêche d'affecter le lien
+      item.classList.toggle('active');
+    });
+  }
+});
+</script>
+
+
+
+{% endblock %}
+

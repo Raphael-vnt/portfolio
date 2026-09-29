@@ -1,0 +1,2636 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-container">
+
+
+  <div class="toc">
+    <h4>Sommaire</h4>
+    <ul>
+      <li><a href="#Presentation">Présentation du jeu et de ses règles</a></li>
+
+      <li class="collapsible">
+        <span class="arrow"></span>
+        <a href="#1">I. Définition formelle du processus</a>
+        <ul>
+          <li><a href="#1.1"> I.1 Suite de tirage de cartes dans un sabot fini et infini</a></li>
+          <li><a href="#1.2">I.2 Constitution de la main du joueur et du croupier</a></li>
+          <li><a href="#1.3">I.3 Fin de partie et gains du joueur</a></li>
+          <li><a href="#1.4">I.4 Propriétés de Markov et espérance de gains</a></li>
+        </ul>
+      </li>
+
+      <li class="collapsible">
+        <span class="arrow"></span>
+        <a href="#2">II. Probabilités d'états absorbants du croupier et espérance de Stand</a>
+        <ul>
+          <li><a href="#2.1">II.1 Résolution par calcul matriciel pour le cas \(N = +\infty\)</a></li>
+          <li><a href="#2.2"> II.2 Résolution  par programmation dynamique pour le cas \(N \in \mathbb{N}^*\)</a></li>
+        </ul>
+      </li>
+
+      <li class="collapsible">
+        <span class="arrow"></span>
+        <a href="#3">III. Processus de décision Markovien (PDM), stratégie d'arrêt du joueur, espérance de Hit et Split</a>
+        <ul>
+          <li><a href="#3.1">III.1 Définitions et propriétés</a></li>
+          <li><a href="#3.2">III.2 PDM pour le cas \(N = \infty\)</a></li>
+          <li><a href="#3.3">III.3 PDM pour le cas \(N \in \mathbb{N}^* \)</a></li>
+        </ul>
+      </li>
+
+      <li class="collapsible">
+        <span class="arrow"></span>
+        <a href="#4">IV. Espérance de gain à long terme, Ruine, Mise secondaire et comptage de cartes</a>
+        <ul>
+          <li><a href="#4.1">IV.1 Approximation des moments d'ordre 1 et 2, convergence et distribution</a></li>
+          <li><a href="#4.2">IV.2 Ruine et réussite du joueur</a></li>
+          <li><a href="#4.3">IV.3 Mise secondaire</a></li>
+          <li><a href="#4.4">IV.4 Comptage de cartes</a></li>
+
+        </ul>
+      </li>
+
+
+    </ul>
+  </div>
+
+
+  <div class="text-block">
+    <h1 id="intro">
+    Contrôle optimal au Blackjack par MDP 
+    <span class="subtitle">Formulation et implémentation</span>
+    </h1>
+
+    <div class="tags">
+      <span>#ChaînesAbsorbantes</span>
+      <span>#MDP</span>
+      <span>#EquationsdeBellman</span>
+      <span>#ProgrammationDynamique</span>
+      <span>#POO</span>
+      <span>#Monte-Carlo</span>
+      <span>#Python</span>
+    </div>
+
+
+    <p>
+    L’objectif est de proposer une modélisation mathématique du Blackjack
+    dans le cadre du contrôle stochastique à horizon discret et à espace fini.
+    Le jeu est formulé comme un MDP, dans lequel le joueur
+    doit choisir de manière optimale une stratégie d’arrêt afin de maximiser son
+    espérance de gain.
+    Les parties <b>I.</b> et <b>II.</b> sont consacrées à la construction formelle du modèle probabiliste,
+    incluant la définition des variables aléatoires, des transitions d’état et le calcul des
+    résultats absorbants du jeu. La partie <b>III.</b> introduit les équations d’optimalité de Bellman et le PDM
+    afin de déterminer une politique optimale dans le cas d'un sabot infini ou fini.
+    Enfin dans la partie <b>IV.</b>,
+    des simulations de Monte-Carlo sont utilisées d’une part,
+    pour valider empiriquement certains résultats théoriques, et d’autre part,
+    pour estimer des quantités difficiles, voire impossibles, à déterminer de manière
+    purement analytique, telles que les distributions de gains à long terme ou les
+    probabilités de ruine/réussite du joueur dans des cadres plus réalistes.
+    On propose alors d'implémenter intégralement le jeu du Blackjack en suivant les principes de POO et en intégrant 
+    une multitude de règles et paramètres modulables (abandon, nombre de decks, % avant mélange, nombre de splits max, tirer apres un split d'As, etc.). 
+    </p>
+
+    <p class="github-note">
+      <strong>Ressources :</strong> l’ensemble du code, des simulations et des expériences numériques est disponible sur
+      <a href="https://github.com/TON_USERNAME/TON_REPO" target="_blank">GitHub</a>.
+    </p>
+
+    
+    <h2 id="Presentation"> Présentation du jeu et de ses règles</h2>
+
+    <p>Le Blackjack est un jeu de cartes qui oppose chaque joueur au croupier. L’objectif est d'obtenir une main dont la valeur se rapproche le plus de 21, sans le dépasser, et battre la main du croupier.
+      Le résultat de partie pour chaque joueur, dépends uniquement de la main de ce dernier et de celle du croupier.
+      Pour cette étude, on utilisera les règles européennes les plus répandues (NHC, Stand Soft 17).
+      Chaque joueur se constitue une main en reçevant deux cartes du sabot, et le croupier une seule ; toutes les cartes sont visibles.  
+      Les cartes numériques valent leur valeur faciale, les figures valent 10 points, et l’As peut valoir 1 ou 11 points, selon ce qui est le plus avantageux pour la main.
+      Lorsque les cartes sont distribuées, les joueurs ont le choix de choisir parmi les actions suivante pour chaque main :
+    </p>
+  
+  <ul>
+    <li><strong>Tirer (Hit)</strong> : demander une carte supplémentaire. Le joueur peut tirer autant de cartes qu'il le souhaite.</li>
+    <li><strong>Rester (Stand)</strong> : conserver sa main actuelle. Plus aucune actions ne peut être réalise sur cette main.</li>
+    <li><strong>Doubler (Double Down)</strong> : doubler sa mise initiale en échange d’une seule carte supplémentaire. Le joueur ne peut doubler que lorsque la main possède deux cartes.</li>
+    <li><strong>Séparer (Split)</strong> : si les deux premières cartes d'une main ont la même valeur, le joueur peut les séparer en deux mains distinctes, chacune jouée séparément avec une mise équivalente.</li>
+    <li><strong>Abandonner (Surrender)</strong> : le joueur perds la moitié de sa mise. L'abandon ne se fait que sur une main non splitée.</li>
+  </ul>
+
+  <p>
+    Si le total des cartes d'une main du joueur dépasse 21 (bust) en tirant ou doublant, le joueur perd automatiquement la mise de la main.
+    Quand tous les joueurs ont fini de jouer toutes leur mains (en restant ou bust), le croupier joue ensuite sa main en suivant cette règle : il tire jusqu’à atteindre au moins 17 points. 
+  </p>
+
+  <p>
+    Pour chacune des mains de chaque joueur on effectue l'évaluation suivante : 
+    si une main n'a pas bust et que son score est supérieur à celui du croupier, cette derniere gagne une fois sa mise. Une main remporte également (toujours sans avoir bust) si le croupier bust lors de son tirage.
+    Si ni la main ni le croupier ne bust, c'est celui qui a le score le plus élevé parmi les deux qui l'emporte, sinon il y a égalité. <br>
+    Un Blackjack correspond à une main (non splitée) composée d’un As et d’une carte valant 10 dès la distribution initiale. Cette main bat toute autre combinaison, 
+    sauf en cas d’égalité avec un autre Blackjack. Le joueur remporte la mise de la main * 1.5. <br>
+    Le but du joueur est avec les informations dont il dispose, choisir l'action qui maximise son espérance de gain parmi celles disponibles. 
+  </p>
+
+
+
+
+    <h2 id="1"> I. Définition formelle du processus</h2>
+
+    <p>
+     L’objectif de cette première partie est de formaliser les processus de tirages de cartes du croupier et du joueur, et de comprendre commment peuvent être exprimer les espérances de gain du joueur, conditionnellement 
+     aux actions de ce derniers.
+     Trois informations sont à la disposition du joueur et sont nécessaires à l’évaluation de ces espérances :
+    </p>
+
+     <ul>
+      <li>La main du joueur : composé de plusieurs cartes (deux à la distribution initiale)</li>
+      <li>La carte du croupier</li>
+      <li>L'état du sabot : en particulier les cartes restantes qui le compose</li>
+    </ul>
+
+    <p>
+      Soit \(\alpha \in \mathbb{R^+}\) la mise d'une main, il est évident que pour tout score d'une main supérieur à \(21\), l'espérance est quoiqu'il arrive égale à \(- \alpha\) (le joueur perds forcément sa mise).
+      On s'instéressera alors aux mains ayant un score inférieur ou égale à \(21\).
+    </p>
+
+    <p>
+      On se place dans un espace probabilisé \((\Omega, \mathcal{A}, \mathbb{P})\).
+    </p>
+
+    <h3 id="1.1"> I.1 Suite de tirage de cartes dans un sabot fini et infini</h3>
+
+    <p>
+      Un jeu de cartes standard comprend 52 cartes distinctes. 
+      Il est constitué d'un ensemble \(E\) de 13 rangs 
+      \(\{2,3,4,5,6,7,8,9,10,J,Q,K,A\}\), 
+      chacun décliné en quatre couleurs : carreau, cœur, pique et trèfle. 
+      Chaque rang apparaît donc exactement quatre fois, une fois par couleur.
+    </p>
+
+    <p>
+    On considère un sabot composé de 
+    \( N \in \mathbb{N}^* \cup  \{+\infty \} \) jeux de cartes classiques, soit un total de 
+    \( 52 \cdot N \) cartes uniques lorsque \( N \) est fini.  
+    On souhaite modéliser via une suite de variables aléatoires un tirage successif sans remise de plusieurs cartes issues du sabot.
+    </p>
+
+    <p>
+      Soit \( (X_n)_{n \ge 1} \) une suite de variables aléatoires représentant les cartes tirées successivement du sabot : \( X_1 \) est la première carte tirée, \( X_2 \) la deuxième, etc.
+      Dans les règles du blackjack classique, la couleur n'a pas d'influence sur les actions du joueur et du croupier, ni sur les probabilités de gains (on utilisera cependant cette information plus tard dans le calcul
+      de mise secondaire).
+    </p>
+
+    <p>
+      <b> Cas d'un sabot fini   </b>
+    </p>
+
+    <p>
+      Soit \(N \in \mathbb{N}^*\). Le sabot est fini et on définit \( E' = E \cup \{†\}\, \). L'élément \(†\) correspond à un tirage dans un sabot vide. 
+    </p>
+
+    <p>
+       Soit \( (E', \mathcal{E'}) \) un espace mesuré avec \(\mathcal{E'} = \mathcal{P}(E')\),  on définit \( X_n \) pour tout \(n \geq 1 \) :  
+        \[
+        X_{n} : (\Omega, \mathcal{A}) \to (E', \mathcal{E'})
+        \]
+    </p>
+
+    <p>
+      On introduit également une suite de variables aléatoires \( (\mathbf{S}_n)_{n \ge 0} \) représentant 
+      l’état du sabot après \( n \) tirages.  
+      \( \mathbf{S}_n \) est un vecteur comptant le nombre de cartes restantes de chaque type dans le sabot
+      après \( n \) tirages défini.   
+    </p>
+
+    <p>
+      Soit l'espace mesuré \(( \mathbb{N}^E,  \mathcal{N})\) avec \(\, \mathbb{N}^E = \{f : E \to \mathbb{N}\}\), et \(\, \mathcal{N} = \mathbb{P}(\mathbb{N}^E)\). 
+      On définit \(\mathbf{S}_n\) pour tout \(n \geq 0 \) : 
+      \[
+        \mathbf{S}_{n} : (\Omega, \mathcal{A}) \to (\mathbb{N}^E, \mathcal{N})
+      \]
+    </p>
+
+    <p>
+      Pour chaque carte \(c \in E \), on définit la projection en coordonnée du vecteur  : 
+      \[
+          \pi_c : \mathbb{N}^E \to \mathbb{N}, \quad \pi_c(f) = f(c)
+      \] 
+      
+      Qui nous permettra d'écrire par la suite \(\mathbf{S}_n(c) = \pi_c \circ \mathbf{S}_n \) comme le nombre de cartes \(c\)
+      restantes après \(n\) tirages du sabot. 
+      Par ailleurs, l'état initial du sabot est déterministe, et vaut pour un jeu de cartes classique pour tout \(N \geq 1, \, \,  c \in E\) : 
+
+      \[
+          \mathbf{S}_0(c) = 4 \cdot N 
+      \]
+    </p>
+
+    <p>
+      On définit la filtration naturelle \(\mathcal{F}_n \) avec \(\mathcal{F}_0 = \sigma(S_0)\), et définit pour tout \(n \geq 1\) : 
+      \[
+      \mathcal{F}_n = \sigma(X_1,\dots,X_n)  = \sigma(\mathbf{S}_1,\dots,\mathbf{S}_n)
+      \]
+      En particulier, pour tout \( n \ge 1 \), \( X_n \) et \( \mathbf{S}_n \) sont \( \mathcal{F}_n \)-mesurables. \( \mathcal{F}_n \) nous donne accès à toute l'information sur la variable aléatoire 
+      \( X_n \) et nous permet de mesurer tout événement issu des tirages \( X_1, ..., X_n \).
+
+      Les processus \( (X_n)_{n \ge 1} \) et \( (\mathbf{S}_n)_{n \ge 0} \) sont liés par la relation suivante pour tout \(n \geq 1 , \,  c \in E\) : 
+      \[
+      \mathbf{S}_n(c) = \mathbf{S}_{n-1}(c) - \mathbb{1}_{\{X_n =c\} }
+      \]
+    </p>
+
+    <p>
+      De plus, conditionnellement à \( \mathcal{F}_{n-1} \), la loi de \( X_n \) est entièrement déterminée
+      par l’état du sabot \( \mathbf{S}_{n-1} \) pour tout \( c \in E' \), \(n \geq 1\) : 
+      \[
+      \mathbb{P}(X_n = c \mid \mathcal{F}_{n-1}) =
+      \begin{cases}
+      \dfrac{\mathbf{S}_{n-1}(c)}{\displaystyle \sum_{c' \in E} \mathbf{S}_{n-1}(c')}
+      & \text{si }  \sum_{c' \in E} \mathbf{S}_{n-1}(c') \neq 0,\; c \in E, \\[6pt]
+      1
+      & \text{si } \sum_{c' \in E} \mathbf{S}_{n-1}(c') = 0,\; c = †, \\[4pt]
+      0
+      & \text{si } \sum_{c' \in E} \mathbf{S}_{n-1}(c') = 0,\; c \neq †.
+      \end{cases}
+      \]
+    </p>
+
+    <p>
+      Dans le cas \(N \in \mathbb{N}^*\), la valeur de \(†\) peut être vu comme un état absorbant de \( (X_n)_{n \ge 1} \) et \( (\mathbf{S}_n)_{n \ge 0} \), issu d'un temps d'arrêt .
+      Ce temps d'arrêt correspond au moment où le sabot devient vide et est définie par : 
+
+      \[
+          T = \inf\{n \geq 1 : \sum_{c \in E} \mathbf{S}_{n}(c) = 0\} =  \inf\{n \geq 1 : X_n = † \}
+      \]
+
+
+      Egalement, avec \(N \in \mathbb{N}^*\), la famille de v.a \( (X_n)_{n > 0} \) n'est pas indépendante puisqu'il sagit d'une succession de tirage sans remise. 
+      En revanche, si \(N = \infty\), le processus est équivalent à un tirage avec remise et les \(X_n\) sont \(\text{i.i.d}\).
+    </p>
+
+     <p>
+      <b> Cas d'un sabot infini   </b>
+    </p>
+
+    <p>
+      Soit \(N = \infty\). Le processus \( (X_n)_{n \ge 1} \) est équivalent à un tirage avec remise et les \(X_n\) sont \(\text{i.i.d}\). <br> 
+      \((X_n)\) est alors défini sans états absorbants, pour tout \(n \geq 1\) : 
+      \[
+        X_{n} : (\Omega, \mathcal{A}) \to (E, \mathcal{E})
+      \]
+    </p>
+
+    <p>
+      Puisque le sabot reste inchangé au fil des tirages, on définit ce dernier comme vecteur \(\mathbf{S}\) déterministe appartenant au simplexe :
+      \[
+      \mathbf{S} \in  \Delta_E =
+      \left\{
+      \mathbf{s} \in \mathbb{R}_+^{E}
+      \;\middle|\;
+      \sum_{c \in E} \mathbf{s}(c) = 1
+      \right\}
+      \]
+    </p>
+
+    <p>
+      Chaque élément de \(\mathbf{S}\) correspond à la proportion des différents rangs dans le sabot infini. On a alors pour tout \(c \in E\) et tout \(n \geq 1\) :
+      \[
+         \mathbb{P}(X_n = c) = \mathbf{S}(c) 
+      \] 
+    </p>
+
+    <p>
+      Egalement, comme la famille \( (X_n)_{n \ge 1} \) est \(\text{i.i.d}\), alors pour tout \(n > 1\) :  \[X_n \perp\!\!\!\perp \mathcal{F}_{n-1} = \sigma(X_1, \dots, \ X_{n-1})\]
+    </p>
+
+    <p>
+      Puisque le sabot ne peut être vide, on considèrera que le temps d'arrêt \(T = \infty\), dans ce cas précis.
+    </p>
+
+
+    <h3 id="1.2"> I.2 Constitution de la main du joueur et du croupier</h3>
+
+    <p>
+      <b> Main d'un joueur et du croupier </b>
+    </p>
+
+     <p>
+    Soit \( (X_{\phi(n)})_{n > 0} \) une suite extraite de \( (X_n)_{n > 0} \), avec \( \phi : \mathbb{N}^* \to \mathbb{N}^*\) injective croissante. 
+    Ici \(\phi(n)\) représente l'indice des cartes que va tirer un joueur pour se constituter une main. Par exemple pour deux joueurs tirant chacun leur tour dans le sabot,
+    l'un aura une main représenté par la suite \( (X_{2n})_{n > 0} \)  et l'autre \( (X_{2n+1})_{n > 0} \).
+    </p>
+
+    <p>
+      Tout comme pour le cas d'un sabot fini, il est possible d'encoder l'information des cartes d'une main d'un joueur par une suite de vecteur \((\mathbf{H}_n)_{n \geq 0}\) définit pour tout \(n \geq 0 \) : 
+      \[
+        \mathbf{H}_{n} : (\Omega, \mathcal{A}) \to (\mathbb{N}^E, \mathcal{N})
+      \]
+    </p>
+
+    <p>
+      A l'état \( \mathbf{H}_{0} \, \), le joueur n'a pas encore tiré de cartes et pour tout \(c \in E, \, \, \mathbf{H}_{0}(c) = 0  \). Pour tout \(n \geq 1 \, \) et tout \(c \in E \,\), on a la relation suivante 
+      avec le processus \( (X_n)_{n > 0} \) : 
+      \[
+        \mathbf{H}_n(c) = \mathbf{H}_{n-1}(c) + \mathbb{1}_{\{X_{\phi(n)} =c\} }
+        \tag{1}
+      \]
+    </p>
+
+    <p>
+      \(\mathbf{H}_n\) représente ici \(n\) tirages effectué par le joueur depuis le sabot à l'état \(\mathbf{S}_{\phi(n)}\) (un tirage pouvant être nul avec \(X_{\phi(n)} = †\)), tandis que \(\mathbf{S}_n\) et \(X_n\) sont indexé par rapport 
+      aux \(n\) tirages totales du sabot.
+    </p>
+
+    <p>
+      Les valeurs des rangs de la main augmente au fur et à mesure que le joueur tire.
+      Pour \(N =  +\infty\), une main de taille \(n\) est modélisée par le vecteur \(\mathbf{H}_n\) (le sabot ne pouvant être vide pour tout \(n\)).
+    </p>
+
+    <p>
+      Pour \(N \in \mathbb{N}^*\), on considère que \( T > \phi(1)\), c'est à dire le sabot n'est pas vide avant que le joueur tire sa première carte. <br>
+      On note \(T'\) le temps d'arrêt suivant 
+      \(T' = \inf\{n \geq 1 : \sum_{c \in E} \mathbf{S}_{\phi (n)}(c) = 0\}\) 
+      qui correspond à la première carte du joueur entrainant un sabot vide. 
+      Une main de taille \(n \wedge T'\) est alors modélisé par le vecteur \(\mathbf{H}_{n \wedge T'}\).
+
+    </p>
+
+    <p>
+      Par construction, on peut montrer par récurrence que lorsque \(N \in \mathbb{N}^*\), alors pour tout \(n \geq 0\) et \(c \in E\) : 
+      \[
+        \mathbf{H}_n(c) \leq \mathbf{S}_0(c)
+        \tag{2}
+      \]
+      Autrement dit, une main ne peut pas avoir plus de cartes de chaque rangs présents dans le sabot initial fini. 
+    </p>
+
+    <p>
+      On note \(\mathcal{H}_n\) la filtration naturelle adaptée à \((\mathbf{H}_n)_{n \geq 0}\), tel que pour tout \(n \geq 1  \) :   
+      \[
+      \mathcal{H}_n = \sigma(X_{\phi(1)}, \dots X_{\phi(n)}) 
+      \quad \text{avec } \quad
+
+      \mathcal{H}_n \subseteq \mathcal{F}_{\phi(n)} 
+      \]
+    </p>
+
+    <p>
+      De même, soit \( (X_{\psi(n)})_{n > 0} \) la suite de cartes tirées par le croupier, avec avec \( \psi : \mathbb{N}^* \to \mathbb{N}^*\) injective croissante. 
+    </p>
+
+     <p>
+      On définit alors le vecteur aléatoire \((\mathbf{D}_n)_{n \geq 0 \, }\) représentant la main du croupier et qui dépend de \( (X_{\psi(n)})_{n > 0} \) tel que : 
+      <ul >
+        <li> \( \mathbf{D}_{n} : (\Omega, \mathcal{A}) \to (\mathbb{N}^E, \mathcal{N})  \quad \forall n \geq 0 \)</li>
+        <li> \( \mathbf{D}_{0}(c) = 0  \quad \forall c \in E \) </li>
+        <li> \(\mathbf{D}_n(c) = \mathbf{D}_{n-1}(c) + \mathbb{1}_{\{X_{\psi(n)} =c \}} \quad \forall n \geq 1 \)</li>
+        <li> \(\mathbf{D}_n(c) \leq \mathbf{S}_0(c) \quad \forall n \geq 0, \quad N \in \mathbb{N}^* \) </li>
+      </ul>
+    </p>
+
+    <p>
+      On précisera plus tard dans cette partie la relation entre \(\phi\), \(\psi\) et plusieurs temps d'arrêts. 
+    </p>
+
+    <p>
+      <b> Score d'une main  </b>
+    </p>
+
+    <p>
+    Soit une fonction \( \nu \) définit par  \( \, \nu: \mathbb{N}^E \to\  \mathbb{N} \ \). Avec pour toute main \( \mathbf{M} \in \mathbb{N}^E   \) : 
+    \[
+      \nu(\mathbf{M}) =  \sum_{c \in \mathbf{M} }\Big( H(c) \,\, \mathbb{1}_{\{c \notin \{J,Q,K,A\} \}} + \mathbb{1}_{\{c=A\}} + 10 \cdot \mathbb{1}_{\{c \in \{J,Q,K\}\}} \Big)
+    \]
+    Le réel issu de  \(  \nu \circ \mathbf{H}_{n \wedge  T'} \) représente la valeur d'une main d'un joueur de taille \( n \wedge T' \), en comptant les As comme 1, les figures comme 10 et le reste commme valeur de rang.
+    </p>
+
+    <p>
+    Soit une deuxième fonction \(\eta \) définit par \( \ \eta: \mathbb{N}^E \to\  \mathbb{N} \ \). Avec pour tout \( \mathbf{M} \in \mathbb{N}^E   \) : 
+    \[
+      \eta(\mathbf{M}) = \mathbb{1}_{\{ \mathbf{M}(A) \geq 1 \}} \, \mathbb{1}_{\{ \nu(\mathbf{M}) \leq 21\}}
+    \]
+    \(\eta \) donne l'information sur la présence d'un As dit "Soft" dans une main. Un As est dit soft si ce dernier peut prendre la valeur de \(1\) ou \(11\) 
+    sans dépasser \(21\).  L'As pouvant prendre la valeur de \(1\) ou \(11\) selon le choix
+    du joueur, il est intéressant pour ce dernier de comptabiliser les As de sorte à se rapprocher de \(21\) sans dépasser ce
+    score. Par exemple pour une main \((A, 6, A)\), le meilleur score que le joueur puisse réclamer est \(18\), en comptant un As
+    pour \(11\) et l'autre pour \(1\). Un seul As peut être com
+    pter comme Soft sans quoi on dépasse nécessairement \(21\). 
+    </p>
+
+    <p>
+    On peut définir alors selon ce principe  la fonction \( \mu \) définit par \( \, \mu: \mathbb{N}^E \to\  \mathbb{N} \, \),  la valeur optimale pour toute main \(\mathbf{M} \in \mathbb{N}^E \) :
+    \[
+    \mu(\mathbf{M}) = \nu(\mathbf{M}) + 10 \cdot \eta(\mathbf{M})
+    \]
+    </p>
+
+    <p>
+      <b> Temps d'arrêt   </b>
+    </p>
+
+    <p>
+       Avec les règles du soft 17, le croupier doit s'arrêter de tirer lorsque ce dernier obtient \(17\) ou plus. On modélise cela par : 
+      \[
+        \tau := \inf \{ n > 0 :  \mu \circ \mathbf{D}_n \geq 17\}
+      \]
+      Ce temps d'arrêt représente le premier instant où la valeur optimale du croupier dépasse ou atteint \(17\).
+    </p>
+
+    <p>
+      Le joueur quant à lui peut s'arrêter quand il le souhaite. Ce dernier n'a aucun intérêt à tirer lorsque qu'il atteint un score de \(21\), et perds dès qu'il dépasse \(21\). Cela est représenté par le temps
+      d'arrêt : 
+      \[
+        \kappa := \inf \{ n > 0 :  \mu \circ \mathbf{H}_n \geq 21\}
+      \]
+
+    </p>
+
+    <p>
+      Ces temps d'arrêts sont extrêmement importants, puisque toute l'étude de stratégies du Blackjack se fait sur des états antérieures à ces temps d'arrêts, les états postérieures dictant déjà la victoire ou défaite du joueur.
+
+    </p>
+
+
+     <p>
+      Certaines propriétés importantes que l'on impose à \(\phi\) et \(\psi\), les indices de \( (X_{\phi(n)})_{n > 0} \) et  \( (X_{\psi(n)})_{n > 0} \),
+       respectivement des cartes tirées par le joueur et le croupier, sont les suivantes : 
+      <ul>
+        <li> \(\phi(n) \neq \psi(n) \quad \forall n \in \mathbb{N}^*\)</li>
+        <li> \(\psi(1) < \phi(n \wedge \kappa) < \psi(m \wedge \tau) < T \quad \forall (n,m) \in \mathbb{N}^* \times  \mathbb{N}^* \backslash \{1\} \) </li>
+      </ul>
+    </p>
+
+    <p>
+      Le premier point revient à dire que le croupier et le joueur ne peuvent pas tirer les mêmes cartes. <br>
+      \(\psi(1) < \phi(n \wedge \kappa)\) signifie que le croupier tire toujours sa première carte avant celles du joueur. <br>
+      \(\phi(n \wedge \kappa) < \psi(m \wedge \tau)\) signifie que le joueur peut tirer jusqu’à dépasser 21 (d'autres joueurs peuvent tirer des cartes avant ou après lui), puis le croupier tire ses cartes
+      jusqu'à atteindre \(17\).  
+    </p>
+
+    <p>
+      Enfin la majoration par \(T\) signifie que joueur comme croupier peuvent tirer jusqu’à atteindre leur états terminaux \( \kappa\) et \( \tau \) sans risque de sabot vide.
+    </p>
+
+    <p>
+      Puisque \(\psi(1) < \phi(n \wedge \kappa )\) pour tout \( n \geq 1 \), on a \(\sigma(X_{\psi(1)}) \subset \mathcal{F}_{\phi(n \wedge \kappa)} \). La tribu \(\mathcal{F}_{\phi(n \wedge \kappa )}\) permet donc de mesurer et d'avoir accès à toutes
+       les informations disponible par le joueur à savoir : son jeu, celui du croupier et l'état du sabot. 
+    </p>
+
+
+    <h3 id="1.3">I.3 Fin de partie et gains du joueur</h3>
+
+    <p>
+      <b> Evenenements de fin de partie  </b>
+    </p>
+      
+      <p>
+        L'issue d'une partie pour un joueur se fait en comparant le résultat de \( \mathbf{D}_\tau \) et \( \mathbf{H}_{n \wedge \kappa}\), c'est à dire, en comparant la main du joueur de taille \( n \wedge \kappa\), 
+        face à la main du croupier de taille \(\tau\).
+      </p>
+
+      <p>
+        Soit \(W_n\) un premier évenement, correspondant à la victoire d'un joueur sans Blackjack et définit pour tout \(n, \, \tau >0\) par :
+         \[
+            W_{n} = \Big\{  (\mu \circ \mathbf{H}_{n}) \leq 21 \ \cap \ \Big(  (\mu \circ \mathbf{H}_{n}) > (\mu \circ \mathbf{D}_{\tau})
+            \ \cup \ (\mu \circ \mathbf{D}_{\tau}) > 21\
+            \Big) \Big\}
+        \]
+      </p>
+
+      <p>
+        L'évenement d'un Blackjack uniquement par le joueur, peut être définit pour tout \(n, \, \tau >0\) par : 
+        \[
+            B_n = \Big\{ \mathbf{H}_n = e_{(A,10)} \ \cap \  \mathbf{D}_\tau \neq e_{(A,10)}  \Big\}
+        \]
+
+        Avec \( e_{(A,10)}(c)
+      =
+      \begin{cases}
+      1 & \text{si } c \in (A,10) \\
+      0 & \text{sinon}
+      \end{cases} \quad 
+      \)
+      à valeur dans \(\mathbb{N}^E \)
+      qui correspond à un Blackjack, i.e avec une main ayant un As et un \(10\).
+      </p>
+
+      <p>
+        L'évenement d'égalité est lui définit pour tout \(n, \, \tau > 0 \) par :     
+        \[
+        E_n = E'_n \setminus F_n
+        \]
+      </p>
+
+      <p>
+        Avec  \( E'_n = \Big\{  (\mu \circ \mathbf{H}_n) \leq 21 \ \cap \  (\mu \circ \mathbf{H}_n) = (\mu_\tau \circ \mathbf{D}_\tau) \Big\} \ \)
+        qui correspond à une égalité sur le score. 
+      </p>
+
+      <p>
+        Et avec \(F_n = \Big\{  (\mu \circ \mathbf{H}_n) = 21 \ \cap \  \mathbf{H}_n \neq e_{(A,10)} \ \cap \ \mathbf{D}_\tau = e_{(A,10)} \Big\} 
+        \cup 
+        \Big\{  (\mu \circ \mathbf{D}_\tau) = 21 \ \cap \  \mathbf{D}_\tau \neq e_{(A,10)} \ \cap \  \mathbf{H}_n = e_{(A,10)} \Big\}
+        \) 
+        <br>
+        L'évenement \(F_n\) correspond au cas où le joueur ou le croupier se retrouve avec un Blackjack face à un score de \(21\) sans Blackjack de la part de l'autre partie. 
+        En effet, bien qu'une main possédant un Blackjack correspond à un score de \(21\), le blackjack bat toute autre main et ce cas la ne peut être considéré comme une égalité.
+      </p>
+
+      <p>
+        Enfin l'évenement de défaite du joueur  est définit pour tout \(n, \, \tau > 0 \) par : 
+         \[
+            L_{n} = \Big\{  (\mu \circ \mathbf{H}_{n}) > 21 \ \cup \ \Big(  (\mu \circ \mathbf{H}_{n}) < (\mu \circ \mathbf{D}_{\tau})
+            \ \cap \ (\mu \circ \mathbf{D}_{\tau}) \leq 21\
+            \Big) \Big\} \ \cup \ \Big\{ \mathbf{D}_\tau = e_{(A,10)} \ \cap \  \mathbf{H}_n \neq e_{(A,10)}  \Big\}
+        \]
+
+      </p>
+
+      <p>
+        La probabilité de ces évenements se construit par la mesure et tribu produit, issue du couple de v.a \( (\mathbf{H}_n, \mathbf{D}_\tau) \), défini par :
+        
+        \[
+        \begin{aligned}
+        (\mathbf{H}_n, \mathbf{D}_{\tau}) : \Omega & \longrightarrow ( \mathbb{N}^E \times \mathbb{N}^E, \ \mathcal{N} \otimes \mathcal{N}) \\
+        \omega &\longmapsto (\mathbf{H}_n(\omega), \mathbf{D}_\tau(\omega))
+        \end{aligned}
+        \]
+
+        Les évenements \(W_n, B_n, E_n, L_n\) forment une partition avec pour tout \(n \geq 1\) :
+        
+        <ul>
+          <li>
+            \(W_n, B_n, E_n, L_n \) sont deux à deux disjoints
+          </li>
+          <li>
+             \(\mathbb{P}(W_n) + \mathbb{P}(B_n) + \mathbb{P}(E_n) + \mathbb{P}(L_n)  = 1 \)
+          </li>
+        </ul>
+      </p>
+
+    <p>
+      <b> Gain du joueur </b>
+    </p>
+
+    <p>
+        On introduit \( (G_n)_{n \geq 1} \) la suite de variables aléatoires à valeurs dans \(\mathbb{R}\) représentant le gain du joueur et défini pour 
+        tout \(n \geq 0\), et mise \(\alpha \in \mathbb{R}^*_+\) issue d'une main unique sans doubler par : 
+
+        \[G_n = \cfrac{3 \alpha}{2} \ \mathbb{1}_{B_n} + \alpha \ \mathbb{1}_{W_n}  - \alpha \ \mathbb{1}_{L_n}  
+        \]
+    </p>
+
+    <p>
+      Pour tout \(n \geq 1\), \(G_n \in L^\infty\). Quelques propriétés importantes de \(G_n\) que l'on relève : 
+    </p>
+
+    <br>
+
+    <p>
+      <b> Proposition 1. </b> \(\quad\)Pour le cas \(N = + \infty\), et pour tout \(n \geq 1\), \(\, \mathbb{E}[G_{n \wedge \kappa} \mid \mathcal{F}_{ \phi(n \wedge \kappa)}] \ \)
+       est \(\ \sigma( \mathbf{H}_{n \wedge \kappa} \ , \ \mathbf{D}_1)\) - mesurable et : 
+      \[
+        \mathbb{E}[G_{n \wedge \kappa} \mid \mathcal{F}_{ \phi(n \wedge \kappa)}] 
+        = \mathbb{E}[G_{n \wedge \kappa} \mid \sigma( \mathbf{H}_{n \wedge \kappa} \ , \ \mathbf{D}_1)]
+      \]
+      Ou autrement dit pour un sabot infini, les cartes \(X_{1}, \dots , X_{\psi(1)-1}\) tirées du sabot avant tirage du croupier et du joueur, n'apportent pas d'informations supplémentaires pour déterminer conditionnellement la loi de \(G_n\). 
+      Prouvons cette propriété : 
+    </p>
+
+    <p>
+      On a d'une part que \( \, \sigma( \mathbf{H}_{n \wedge \kappa} \ , \ \mathbf{D}_1) \subseteq  \mathcal{F}_{ \phi(n \wedge \kappa)} \, \) pour tout \(n \geq 1\). 
+      D'autre part \(G_{n \wedge \kappa}\) dépends uniquement des \(X_{\phi(1)}, \dots, X_{\phi(n \wedge \kappa)} \) et  des \( X_{\psi(1)}, \dots,  X_{\psi(\tau)} \) puisque 
+
+       qui sont \(\text{i.i.d}\) lorsque \(N = \infty\), et donc pour toute fonction
+      bornée borélienne \(h\), on a : \( \mathbb{E}[h(G_{n \wedge \kappa}) \mid X_1, \dots, X_{\phi(n \wedge \kappa)}] = \mathbb{E}[h(G_{n \wedge \kappa}) \mid  \mathbf{H}_{n \wedge \kappa} \ , \ \mathbf{D}_1] \).
+    </p>
+    
+    <p>
+      Soit \(B \in \sigma(S_n)\). Par définition de l'espérance conditionnelle,
+      \[
+      \int_B \mathbb E\!\left[G_{n \wedge \kappa} \mid  \sigma( \mathbf{H}_{n \wedge \kappa} \ , \ \mathbf{D}_1)\right]\, d\mathbb P
+      =
+      \int_B G_n \, d\mathbb P.
+      \]
+
+      Or via la propriété de la tour, on a aussi que : 
+      \[
+      \int_B G_{n \wedge \kappa} \, d\mathbb P
+      =
+      \mathbb E\!\left[G_{n \wedge \kappa} \mathbf 1_B\right]
+      =
+      \mathbb E\!\left[\mathbb E\!\left[G_n \mid  \mathbf{H}_{n \wedge \kappa} \ , \ \mathbf{D}_1] \right]\mathbf 1_B\right]
+      =
+      \mathbb E\!\left[\mathbb E\!\left[G_{n \wedge \kappa} \mid X_1, \dots , X_{\phi(n \wedge \kappa)} \right]\mathbf 1_B\right].
+      \]
+
+      Donc,
+      \[
+      \int_B \mathbb E\!\left[G_{n \wedge \kappa} \mid \sigma(X_1, \dots, X_{\phi(n \wedge \kappa)})\right]\, d\mathbb P
+      =
+      \int_B \mathbb E\!\left[G_{n \wedge \kappa} \mid  \sigma( \mathbf{H}_{n \wedge \kappa} \ , \ \mathbf{D}_1) \right]\, d\mathbb P.
+      \]
+
+      Par unicité de l'espérance conditionnelle,
+      \(
+      \mathbb E\!\left[G_{n \wedge \kappa} \mid \mathcal{F}_{ \phi(n \wedge \kappa)} \right]
+      =
+      \mathbb E\!\left[G_{n \wedge \kappa} \mid  \sigma( \mathbf{H}_{n \wedge \kappa} \ , \ \mathbf{D}_1) \right]
+      \quad \text{p.s.}
+      \) <br>
+
+      Entrainant que  \(\, \mathbb{E}[G_{n \wedge \kappa} \mid \mathcal{F}_{ \phi(n \wedge \kappa)}]\)
+       est \(\sigma( \mathbf{H}_{n \wedge \kappa} \ , \ \mathbf{D}_1)\) - mesurable.
+
+    </p>
+
+    <br>
+      <p>
+      <b> Proposition 2. </b> \(\quad\)Pour le cas \(N \in \mathbb{N}^* \), et pour tout \(n \geq 1\), \(\, \mathbb{E}[G_{n \wedge \kappa} \mid \mathcal{F}_{ \phi(n \wedge \kappa)}]\ \)
+       est \(\ \sigma( \mathbf{S}_{\phi(n \wedge \kappa)} \ , \  \mathbf{H}_{n \wedge \kappa} \ , \ \mathbf{D}_1)\) - mesurable et : 
+      \[
+        \mathbb{E}[G_{n \wedge \kappa} \mid \mathcal{F}_{ \phi(n \wedge \kappa)}] 
+        = \mathbb{E}[G_{n \wedge \kappa} \mid \sigma( \mathbf{S}_{\phi(n \wedge \kappa)} \ , \  \mathbf{H}_{n \wedge \kappa} \ , \ \mathbf{D}_1)]
+      \]
+      Autrement dit pour un sabot fini, connaître l'ensemble des cartes tirées est équivalent à connaître l'état du sabot, les cartes du joueur et celle du croupier, pour déterminer conditionnellement la loi de \(G_n\).
+    </p>
+
+    <p>
+      La démonstration se fait de manière analogue à la première proposition.
+    </p>
+
+
+    <h3 id="1.4">I.4 Propriétés de Markov et espérance de gains</h3>
+
+    <p>
+      On introduit la suite de vecteur aléatoire \( (\mathbf{R}_n)_{n \geq 0} \) définit pour tout \(n \geq 0\) par : 
+
+      \[
+      \mathbf{R}_n  =
+      \begin{cases}
+      (\mathbf{S}_{\phi(n)} ,\mathbf{H}_n , \mathbf{D}_1)
+      & \text{si }  N \in \mathbb{N}^*  \\[6pt]
+      (\mathbf{S} , \mathbf{H}_n ,\mathbf{D}_1)
+      & \text{si } N = \infty
+      \end{cases}
+      \]
+
+      \(\mathbf{R}_n\) est à valeur dans \( \mathbb{N}^E \times \mathbb{N}^E \times \mathbb{N}^E  \) pour un sabot fini, et à valeur dans \( \Delta_E \times \mathbb{N}^E \times \mathbb{N}^E   \) pour un sabot infini.
+      On notera de manière simplifiée \(\text{K}\) l'espace d'arrivée de cette suite de v.a, qui représente l'information que le joueur utilise pour l'évaluation de son gain.   
+
+    </p>
+
+    <p>
+      On peut montrer facilement que \( (\mathbf{R}_n)_{n \geq 0} \) est une chaîne de Markov définie pour tout \(n \in \mathbb{N}\), \(N \in \mathbb{N}^* \cup \{\infty\}\), et 
+      \(i_0, \dots , i_n, i_{n+1} \in K^{n+2}\) tels que \(\, \mathbb{P}(\mathbf{R}_0 = i_0,  \dots, \mathbf{R}_n = i_n) > 0 \) : 
+
+      \[
+       \mathbb{P}(\mathbf{R}_{n+1} = i_{n+1} \mid \mathbf{R}_0 = i_0,  \dots, \mathbf{R}_n = i_n) = 
+      \mathbb{P}(\mathbf{R}_{n+1} = i_{n+1} \mid \mathbf{R}_{n} = i)
+      \]
+
+    </p>
+
+    <p>
+      Plus spécifiquement, \( (\mathbf{R}_n)_{n \geq 0} \) est une chaîne homogène ie pour tout \(n \in \mathbb{N}^*\), \(N \in \mathbb{N}^* \cup \{\infty\}\), et \((i,j)\)
+      \( \in K^{2}\), avec  : 
+      
+      \[
+         \mathbb{P}(\mathbf{R}_{n+1} = j \mid \mathbf{R}_{n} = i) =  \mathbb{P}(\mathbf{R}_{n} = j \mid \mathbf{R}_{n-1} = i)
+      \]
+    </p>
+
+    <p>
+      <b> Espérance de Stand</b>
+    </p>
+
+    <p>
+       Pour un \(n \geq 0\) tirages du joueur donné, soit \( \mathbf{R}_{n}\) connue et déterministe tel que le joueur connait ses cartes, l'état du sabot, la carte du croupier et son jeu. 
+       Si ce dernier décide de Stand, il doit estimer son espérance de gain 
+       compte tenu de ces informations, càd  pouvoir calculer pour tout \(i \in \text{K}\) tel que \(\, \mathbb{P}(\mathbf{R}_{n} = i) > 0 \) la quantité  : 
+
+       \[
+          \mathbb{E}[G_n \mid \mathbf{R}_{n} = i] = \cfrac{3 \alpha}{2} \mathbb{P}(B_n \mid \mathbf{R}_{n} = i) + \alpha \, \mathbb{P}(W_n \mid \mathbf{R}_{n} = i) - \alpha \, \mathbb{P}(L_n \mid \mathbf{R}_{n} = i)
+       \]
+
+       Dans le cas du stand, puisque \(\mathbf{H}_{n}\) est connu et détermiste, le calcul de \(G_n\) revient en realité à déterminer la loi de \(\mu \circ \mathbf{D}_{\tau}\) et la probabilité \( \mathbf{D}_\tau = e_{A,10} \) conditionnellement à 
+        \(\mathbf{R}_{n} = i\) avec \(\, \mathbb{P}(\mathbf{R}_{n} = i) > 0 \).
+    </p>
+
+    <p>
+      Notons que dans le cas où \( \mu \circ \mathbf{H}_{n} > 21 \), on a directement que \( \mathbb{E}[G_n \mid \mathbf{R}_{n} = i] = - \alpha \).
+    </p>
+
+     <p>
+      <b> Espérance de Double</b>
+    </p>
+
+    <p>
+       Lorsque le joueur double, ce dernier tire une seule carte supplémentaire et double sa mise. 
+       Le joueur ne peut doubler que lorsque \(n=2\) i.e avec deux cartes en main. 
+       On note \(\mathcal{D}_n\) la variable aléatoire associé au gain si le joueur décide de doubler sa main à l'instant \(n = 2\).
+        Son espérance de gain est alors simplement pour tout \(i \in \text{K}\) tel que \(\, \mathbb{P}(\mathbf{R}_{n} = i) > 0 \): 
+      \[
+          \mathbb{E}[\mathcal{D}_n \mid \mathbf{R}_{n} = i] = 2 \ \mathbb{E}[G_{n+1} \mid \mathbf{R}_{n} = i], \quad n=2 
+       \]
+    </p>
+
+     <p>
+      <b> Espérance de Surrender</b>
+    </p>
+
+    <p>
+      On note \(\mathcal{S}_n\) la variable aléatoire associé au gain si le joueur abandonne à l'instant \(n=2\).
+      \(\mathcal{S}_n\) et son espérance est détermiste et vaut pour tout \(i \in \text{K}\) tel que \(\, \mathbb{P}(\mathbf{R}_{n} = i) > 0 \): 
+      \[
+         \mathbb{E}[\mathcal{S}_n \mid \mathbf{R}_{n} = i] = -\frac{\alpha}{2}, \quad n=2
+      \]
+
+      Là encore, le joueur ne peut abandonner qu'après distribution de ses deux cartes initiales. 
+    </p>
+
+     <p>
+      <b> Espérance de Hit et Split</b>
+    </p>
+
+    <p> On note \( \mathcal{H}_n \) la v.a du gain associé si le jouer Hit/tire pour \(n \geq 0 \). </p>
+
+    <p>
+      L'espérance de Hit et du Split sont plus complexes à calculer. On suppose encore \( \mu \circ \mathbf{H}_{n} < 21 \).  
+      Pour l'esperance de Hit, on pourrait être tenter de prendre  la quantité suivante pour tout \(i \in \text{K}\) tel que \(\, \mathbb{P}(\mathbf{R}_{n} = i) > 0 \) : 
+      \[
+        \mathbb{E}[\mathcal{H}_n \mid \mathbf{R}_{n} = i] = \max_{k \in \mathbb{N}^*}(\mathbb{E}[G_{n + k} \mid  \mathbf{R}_{n} = i ]), \qquad \forall n \geq 0 \\[2mm]
+      \]
+
+       Cette valeur suppose que le joueur fixe à l’avance un nombre de tirages \(k >0\) et ne réévalue pas après chaque carte. Mais l’optimalité nécessite de re-réévaluer après chaque tirage : 
+      c’est un problème d'arrêt optimal et plus particulièrement dans ces conditions, un processus de décision Markovien (MDP) que l'on verra dans la partie <b>III.</b>
+
+    </p>
+
+    <p>
+      L'esperance du split dépend directement de l'esperance de Hit une fois la main splitée. On s'y intéressera une fois l'esperance de Hit déterminée. 
+      Le split ne se fait que pour \(n=2\), dont on notera la v.a du gain engendrée \( \mathcal{L}_n\).
+    </p>
+
+
+
+    <h2 id="2">II. Calcul des probabilités d'états absorbants du croupier</h2>
+
+    <p>
+        L'objectif de cette partie est de calculer pour tout \(i \in \mathbb{N}^* \) et toute valeur de \(\mathbf{R}_n\),  
+        les probabilités \(\mathbb{P}(\mu \circ \mathbf{D}_\tau = i \, \cap \,  \mathbf{D}_\tau \neq e_{A,10} \mid \mathbf{R}_n)\), ainsi que 
+     \(\mathbb{P}(\mathbf{D}_\tau = e_{A,10} \mid \mathbf{R}_n)\). Autrement dit, calculer respectivement la probabilité de tout score final du croupier \(i \in \mathbb{N}^* \) hors Blackjack, 
+     ainsi que la probabilité d'un Blackjack du croupier compte tenu de toute l'information dont dispose le joueur.
+    </p>
+
+    <p>
+      On s'intéressera dans un premier temps au cas du sabot infini avec \(N = +\infty\), on l'on montrera que le problème peut se ramener à un calcul matriciel via chaînes absorbantes
+      avec comme seule depéndance condtionnelle \( \mathbf{D}_1 \).
+    </p>
+
+    <p>
+      On traitera par la suite le cas du sabot fini, en resolvant le problème via programmation dynamique via la résolution d'un problème de Dirichlet en espace discret et fini.
+    </p>
+
+
+    <h3 id="2.1">II.1 Résolution par calcul matriciel pour le cas \(N = +\infty\)</h3>
+
+     <p>
+      <b> Proposition 3.  \(\quad \)</b> Pour \(N = \infty \, \), \(m \geq 0\), et \(n \geq 1\) on a  \( \mathbf{D}_n \perp\!\!\!\perp \sigma(\mathbf{H}_m) \mid \sigma(\mathbf{D}_1)  \ \), 
+      et donc, pour toute fonction bornée borélienne \(f\) : 
+       \[
+        \mathbb{E}[f(\mathbf{D}_{n}) \mid \sigma(\mathbf{R}_m)] = \mathbb{E}[f(\mathbf{D}_{n}) \mid \sigma(\mathbf{D}_1)]
+      \]
+      Qui a pour conséquence direct que pour tout \( A \in \mathcal{N}\) : 
+      \[
+        \mathbb{P}(\mathbf{D}_{n} \in A \mid \mathbf{R}_m) = \mathbf{P}(\mathbf{D}_{n} \in A \mid \mathbf{D}_1)
+      \]
+
+      Cette propriété se démontre aisément et signifie que le main du joueur n'a pas d'impact sur le tirage du croupier.  Une autre propriété importante : 
+    </p>
+
+    <p>
+      <b> Proposition 4. \(\quad \)</b>Pour \(N = \infty \, \), le processus \( (\mathbf{D}_n)_{n \geq 0 } \) suit la propriété de Markov forte, i.e pour toute fonction bornée borélienne \(f\),
+       et pour tout temps d'arrêt \(\tau\) et entier \(s \geq 0\) :
+      \[
+        \mathbb{E}[f(\mathbf{D}_{\tau +s}) \mid \sigma(\mathbf{D}_1, \dots, \mathbf{D}_\tau)] = \mathbb{E}[f(\mathbf{D}_{\tau +s}) \mid \sigma(\mathbf{D}_\tau)]
+      \]
+    </p>
+
+
+    <p>
+      Ce n'est en revanche pas le cas pour \( (\mu \circ \mathbf{D}_n)_{n \geq 0 } \), du au fait que l'As puisse prendre plusieurs valeurs pour chaque \(n\), 
+      et que généralement pour \(i_1, \dots , i_n, i_{n+1} \in K^{n+1}\) tels que \(\, \mathbb{P}(\mu \circ \mathbf{D}_0 = i_0,  \dots, \mu \circ \mathbf{D}_n = i_n) > 0 \) :  
+      \[
+        \mathbb{P}(\mu \circ \mathbf{D}_{n+1} = i_{n+1} \mid \mu \circ \mathbf{D}_0 = i_0,  \dots, \mu \circ \mathbf{D}_n = i_n) \neq 
+        \mathbb{P}(\mu \circ \mathbf{D}_{n+1} = i_{n+1} \mid \mu \circ \mathbf{D}_{n} = i_n)
+      \]
+    </p>
+
+    <p>
+      Ainsi, on ne peut pas utiliser le support/ensemble d'arrivée de \( (\mu \circ \mathbf{D}_n)_{n \geq 0 } \) pour construire une matrice de transition.
+    </p>
+
+    <p>
+      <b> Construction du vecteur \( \mathbf{D'}_n\)</b>
+    </p>
+
+    <p>
+      Considérons maintenant le vecteur aléatoire à valeur dans \( \mathbb{N} \times \{0,1\}^3 \) et définit pour tout \(n \geq 0\) par : 
+      \[ \mathbf{D'}_n = (\mu \circ \mathbf{D}_{n \wedge \tau}, \ \eta \circ \mathbf{D}_{n \wedge \tau}, \ \mathbb{1}_{\{\mathbf{D}_{n \wedge \tau} = e_{A,10}\}}, \ \mathbb{1}_{\{\mathbf{D}_{n \wedge \tau} = e_{10}\}}),  
+      \]
+      Avec \( e_{10} \) et \( e_{A,10}\) des vecteurs de \(\mathbb{N}^E \), tel que : 
+      \[
+      e_{10}(c)=
+      \begin{cases}
+      1 & \text{si } c = 10 \\
+      0 & \text{sinon}
+      \end{cases}
+      \]
+
+      \(\eta \circ \mathbf{D}_n\) permet de distinguer un score possédant un soft ou non. \(\mathbb{1}_{\{\mathbf{D}_n = e_{A,10}\}}\) permet de distinguer le cas 
+      d'un Blackjack ou non, indépendemment de \(n\). Enfin, \(\mathbb{1}_{\{\mathbf{D}_n = e_{10}\}}\) permet de calculer conditionnellement la probabilité de blackjack indépendemment de \(n\). 
+      
+    </p>
+
+    <p>
+      En effet, remarquons que :  
+      \[
+       \mathbb{P}(\mathbf{D}_2 = e_{A,10} \mid  \mu \circ \mathbf{D}_2 = 10)  \neq  \mathbb{P}(\mathbf{D}_1 = e_{A,10} \mid  \mu \circ \mathbf{D}_1 = 10)  
+       \]
+
+     \(\mathbb{P}(\mathbf{D}_3 = e_{A,10} \mid  \mu \circ \mathbf{D}_3 = 21)\) est nécessairement nul car un Blacjack est impossible avec déjà deux cartes en mains dont le score total vaut \(10\).
+      En revanche cette probablité est non nulle avec seulement une carte i.e \(n=1\).
+      
+    </p>
+
+    <p>
+
+      \( (\mathbf{D}'_n)_{n \geq 0 } \) est une chaîne absorbante, i.e pour tout état \(i\) tel que \( \mathbb{P}(\mathbf{D'}_{n} = i) >0 \)
+       et instant \(n \geq 0 \), un état absorbant est atteignable depuis cet état. <br>
+       Un état \(i\) de la chaîne est dit absorbant pour tout \(n \geq 0 \) tel que \( \mathbb{P}(\mathbf{D'}_{n} = i) >0 \) par : 
+       \(\mathbb{P}(\mathbf{D'}_{n+1} = i \mid \mathbf{D'}_{n} = i  ) = 1\) 
+    </p>
+
+    <p>
+      <br> 
+      <b> Proposition 5. \(\quad \)</b> Pour \(N = \infty \, \), \( (\mathbf{D}'_n)_{n \geq 0 } \) possède la propriété forte de Markov. De plus, c'est une chaîne homogène pour tout \( n \geq 1\) et 
+      \( (i,j) \in (\mathbb{N} \times \{0,1\}^3) \times (\mathbb{N} \times \{0,1\}^3) \), tels que \( \mathbb{P}(\mathbf{D}'_{n}=i) > 0 \) et \( \ \mathbb{P}(\mathbf{D}'_{n-1}=i) > 0 \)  : 
+      \[
+         \mathbb{P}(\mathbf{D}'_{n+1} = j \mid \mathbf{D}'_{n} = i) =  \mathbb{P}(\mathbf{D}'_{n} = j \mid \mathbf{D}'_{n-1} = i)
+      \]
+    </p>
+
+    <p>
+      Ou autrement dit, il existe \(P : (\mathbb{N} \times \{0,1\}^3) \times (\mathbb{N} \times \{0,1\}^3) \rightarrow [0,1] \) tel que : 
+
+      \[
+        \mathbb{P}(\mathbf{D}'_{n+1} = j \mid \mathbf{D}'_{n} = i) = P(x,y)
+      \]
+    </p>
+
+    <p>
+      <b> Temps moyen d'absortion et probabilités d'absorbtion</b>
+    </p>
+
+    <p>
+      La chaîne \( (\mathbf{D}'_n)_{n \geq 0 } \) est un très bon candidat pour déterminer pour tout \(i \in \mathbb{N}^* \, \), \(\mathbf{P}(\mu \circ \mathbf{D}_{\tau} =i \mid \mathbf{D}_1) \). 
+      En effet son support est bien moins grand que celui de \( (\mathbf{D}_{n \wedge \tau })_{n \geq 0 } \) qui nécessite de dénombrer l'ensemble des combinaisons de cartes jusqu'à l'arrêt ou bust du croupier. 
+      Explicitons le support de \( (\mathbf{D}'_n)_{n \geq 0 } \) que l'on note :
+      \[\text{supp}(\mathbf{D}'_{n}) = \{x \in \mathbb{N} \times \{0,1\}^3 : \mathbb{P}(\mathbf{D}'_{n} = x) > 0 \}\]
+    </p>
+
+    <p>
+      On a d'une part que \(\text{supp}(\mathbf{D}'_{n})\) est fini, puisque muni du temps d'arrêt \(\tau\).
+      Le score du croupier peut valoir de \(0\) (à \(\mathbf{D}'_0\)) à \(26\) (au maximum de \(\mathbf{D}'_\tau\)). Puisque \(\eta \circ \mathbf{D}_n\) renseigne sur la présence d'un As soft ou non , on peut séparer les états 
+      ayant un As soft de ceux n'ayant pas d'As soft, et définir une bijection de \(\text{supp}(\mathbf{D}'_{n})\) comme : 
+      
+      \[
+        \{0, 2, 3, \dots, 26\} \cup \{A, AA, A2, \dots, A10\} \cup \{10+\}  
+      \]
+    </p>
+
+    <p>
+      L'élément \(\{10+\}\) correspond au cas où \((\mu \circ \mathbf{D}_n = 10, \, \mathbb{1}_{\{\mathbf{D}_1 = e_{10}\} }=0)\) et l'élément \(\{10\}\) au cas 
+      \((\mu \circ \mathbf{D}_n = 10, \, \mathbb{1}_{\{\mathbf{D}_1 = e_{10}\}}=1)\), permettant ainsi de 
+      séparer un \(10\) comme combinaison de plusieurs cartes, d'un \(10\) unique. Notons qu'il n'est pas nécessaire de distinguer les cartes \( J, Q, K, 10 \) au sein de \(\mathbf{D}'_n\) puisqu'elles 
+      partagent le même score.
+    </p>
+
+
+    <p>
+      Au total on dénombre \( m=26 + 11 + 1 = 38\) éléments dans  \(\text{supp}(\mathbf{D}'_{n})\), dont \(r=15 \) états absorbants : les scores allant de \(17\)  à \(26\) et les couples \(A6,...,A10\).
+    </p>
+
+
+    <p>
+      On notera ainsi \(P\) la matrice de transition du croupier de taille \(m \times m \). On peut de plus exprimer la matrice \(P\) sous sa forme canonique, i.e sous la forme : 
+      \[
+    P = 
+    \begin{pmatrix}
+    Q & R \\
+    0 & I
+    \end{pmatrix}
+    \]
+    </p>
+
+    <p>
+      On notera les éléments de la matrice \(P\) pour tout \(k \geq 0, \, (i,j) \in \text{supp}(\mathbf{D}'_{n})^2 \) tels que \(\mathbb{P}(\mathbf{D'}_k=i) > 0\) par :
+      \[
+      p_{ij} = \mathbb{P}^{i,k}(\mathbf{D'}_{k+1}=j) = \mathbb{P}(\mathbf{D'}_{k+1}=j \mid \mathbf{D'}_k=i)
+      \]
+    </p>
+
+    <p>
+      \(R\) est la sous-matrice des états absorbants de taille \( (m -r) \times r \), \(Q\) la matrice des états non absorbants de dimension \( (m -r) \times (m-r) \), et \(I\) la matrice identité de taille \(r\).
+      Par exemple pour un sabot \(\mathbf{S}\) tel que \(\mathbf{S}(c) = \cfrac{1}{13}\) pour tout \(c \in E\), on obtient la matrice \(R\) suivante : 
+    </p>
+
+     
+
+    \[
+    \scriptsize
+    R =
+    \left(
+    \begin{array}{c|c}
+      & 17 & 18 & 19 & 20 & 21 & 22 & 23 & 24 & 25 & 26 & \text{A6} & \text{A7} & \text{A8} & \text{A9} & \text{A10} \\ \hline
+    0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    2 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    3 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    4 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    5 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    6 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \tfrac{1}{13} & 0 & 0 & 0 & 0 \\
+    7 & \tfrac{4}{13} & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \tfrac{1}{13} & 0 & 0 & 0 \\
+    8 & \tfrac{1}{13} & \tfrac{4}{13} & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \tfrac{1}{13} & 0 & 0 \\
+    9 & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{4}{13} & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \tfrac{1}{13} & 0 \\
+    10 & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{4}{13} & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \tfrac{1}{13} \\
+    \text{10+} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{4}{13} & \tfrac{1}{13} & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    11 & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{4}{13} & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    12 & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{4}{13} & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    13 & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{4}{13} & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \\
+    14 & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{4}{13} & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \\
+    15 & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{4}{13} & 0 & 0 & 0 & 0 & 0 & 0 & \\
+    16 & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{4}{13} & 0 & 0 & 0 & 0 & 0 & \\
+    \text{A} & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{4}{13} \\
+    \text{AA} & 0 & 0 & 0 & 0 & \tfrac{1}{13} & 0 & 0 & 0 & 0 & 0 & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & 0 \\
+    \text{A2} & 0 & 0 & 0 & 0 & \tfrac{1}{13} & 0 & 0 & 0 & 0 & 0 & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & 0 \\
+    \text{A3} & 0 & 0 & 0 & 0 & \tfrac{1}{13} & 0 & 0 & 0 & 0 & 0 & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & 0 \\
+    \text{A4} & 0 & 0 & 0 & 0 & \tfrac{1}{13} & 0 & 0 & 0 & 0 & 0 & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & 0 \\
+    \text{A5} & 0 & 0 & 0 & 0 & \tfrac{1}{13} & 0 & 0 & 0 & 0 & 0 & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & \tfrac{1}{13} & 0 \\
+    \end{array}
+    \right)
+
+    \]  
+
+    <p>
+      <br>
+
+      Par la suite, on utilisera une autre bijection de \(\text{supp}(\mathbf{D}'_{n})\) dans \(\{1, \dots, m\}\) comme indices. 
+      Les états non absorbants sont \( i \in \{1, \dots, m-r\} \) et les états absorbants sont \( i \in \{m-r+1, \dots, m\} \). <br>
+      On notera alors pour simplifier les calculs \( \mathbf{D}'_n = i \) pour \( i \in \{1, \dots, m\}\) et \(n \in \mathbb{N}\)
+    </p>
+    
+    <p>
+      <b> Proposition 6. \(\quad\)</b>  Soit \(P\) la matrice de transition d'une chaîne de Markov absorbante \( (\mathbf{D}'_n)_{n \geq 0 } \, \)  sur \( \{1, \dots, m\} \) tel que l'ensemble
+       des états absorbants soit \( \{ m - r + 1 , \dots,  m \}\ \), avec \( \, 0 \leq r < m .\quad \) Alors : 
+        <br>
+        <br>
+
+        1. \( \, \) La matrice \(I- Q\) est inversible et l'expression de la matrice fondamentale \(N\) vaut : 
+        \[
+          N := (I - Q)^{-1} = I + Q + Q^2 + ...
+        \]
+        2. \( \, \) L'élément \(n_{ij}\) de \(N\) est égal à l'espérance du nombre de passages dans l'état \(j\), 
+        depuis l'état \(i\) pour tout instant \(z \geq 0\), tels que \(\mathbb{P}(\mathbf{D'}_z = i) > 0 \) avec \(i,j\) non absorbants dans \( \{1, \dots, m-r\}\): 
+
+         \[
+        n_{ij} = \mathbb{E}^{i,z} \Big(\sum_{k \geq z} \mathbb{1}_{\mathbf{D'}_k = j}\Big) := \mathbb{E} \Big(\sum_{k \geq z} \mathbb{1}_{\mathbf{D'}_k = j} \mid \mathbf{D'}_z = i\Big)
+        \]
+
+    </p>
+
+    <p>
+      Prouvons 1. \( \, \)  Tout d'abord pour une chaîne de Markov absorbante, on a  \( \displaystyle \lim_{n\to\infty} Q^n = 0\).
+      Soit \(x\) un vecteur tel que \(Qx = x\) i.e \( (I-Q)x = 0 \), on a alors : 
+      \[
+        x = Qx = Q^2x = ... = Q^nx = ...
+      \]
+      Et donc \(x = \displaystyle \lim_{n\to\infty} Q^n x = 0\)
+      Par conséquent, \((I - Q)\) est inversible puisque elle n'admet pas \(0\) comme valeur propre. De plus, 
+      \[
+        (I-Q) (I + Q + \dots + Q^n) = I - Q^{n +1}
+      \] 
+      Qui entraîne que 
+      \[
+        (I + Q + \dots + Q^n) = N (I - Q^{n +1})
+      \]
+      Qui a pour conséquence directe que \( \displaystyle \lim_{n\to\infty} \sum_{k=0}^nQ^k = N\)
+    </p>
+
+    <p>
+      Prouvons 2.  
+      Soit \(i, j \le m-r\) deux états non absorbants, et \(0 \leq z \leq k \, \).
+      Soit \( \displaystyle Y_k = \mathbf{1}_{\{\mathbf{D'}_k = j\}} \, \). On a
+
+      \[
+      \mathbb{P}^{i,z}(Y_k = 1) = (Q^{k-z})_{ij}
+      \quad \text{et} \quad
+      \mathbb{P}^{i,z}(Y_k = 0) = 1 - (Q^{k-z})_{ij}.
+      \]
+
+      Donc
+
+      \[
+      \mathbb{E}^{i,z}(Y_k) = (Q^{k-z})_{ij}.
+      \]
+
+      Par conséquent,
+
+      \[
+      \mathbb{E}^{i,z}\!\left(\sum_{k \ge z} Y_k \right)
+      = \sum_{k \ge z} (Q^{k-z})_{ij}
+      = (N)_{ij}
+      = n_{ij}.
+      \]
+    </p>
+
+
+    <p>
+      <b> Proposition 7. </b> \(\quad\) Soit \(P\) la matrice de transition sous forme canonique d'une chaîne de Markov absorbante \( (\mathbf{D}'_n)_{n \geq 0 } \) 
+        <br>
+      Alors : 
+
+         \[
+      P^n = 
+      \begin{pmatrix}
+      Q^n & (I + Q + ... + Q^{n-1})R \\
+      0 & I
+      \end{pmatrix}
+      \]
+
+      Ce qui entraine que 
+      \(
+        \displaystyle \lim_{n\to\infty}  P^n = 
+      \begin{pmatrix}
+      0 & NR \\
+      0 & I
+      \end{pmatrix}
+      \)
+      La démonstration se fait par récurrence.
+    </p>
+
+   
+
+    <p>
+      <b> Proposition 8. </b> \(\quad\) Soit la matrice fondamentale \(N\) d'une chaîne de Markov absorbante \( (\mathbf{D}'_n)_{n \geq 0 } \) sur \( \{1, \dots, m\} \) tel que l'ensemble des états absorbants soit 
+      \( \{ m - r + 1 , \dots,  m \}\ \), avec \( \, 0 \leq r < m\).<br>
+      <br>
+       1. \( \, \) Soit le temps d'arrêt \(\tau = \text{inf}\{k \geq 1 : \mathbf{D}'_k > m -r\}  \) le temps s'écoulant jusqu'à atteindre un état absorbant. 
+       Dans notre cas, c'est le temps d'arrêt du croupier lorsque ce dépasse ou atteint \(17\) (transformé avec la bijection). <br>
+       Soit \(t_{i,z}  = \mathbb{E}^{i,z}(\tau - z) \) le temps moyen d'absortion en partant de l'état non absorbant \( i \in \{ 1, \dots, m-r \} \) à l'instant \(z\) tels que 
+       \( \mathbb{P}(\mathbf{D}'_z = i ) > 0 \, \).
+       Alors : 
+       \[
+        t_{i,z} = \sum_{j=i}^{m-r}n_{ij}
+       \]
+       Ou autrement dit, sous forme matricielle : 
+       \[
+        \begin{pmatrix}
+        t_{1,z} \\
+        \vdots \\
+        t_{m-r,z}
+        \end{pmatrix}
+        =
+        N c
+        \quad \text{avec} \quad
+        c =
+        \begin{pmatrix}
+        1 \\
+        \vdots \\
+        1
+        \end{pmatrix}.
+        \]
+
+        2. \( \, \)  Soit \( i \in \{ 1, \dots, m-r \} \) et \( q \in \{ m-r +1, \dots, m \} \) et soit \(z \geq 0\) tels que \(\mathbb{P}(\mathbf{D'}_z = i) > 0  \).<br>
+         Soit alors \(b_{iq} = \mathbb{P}^{i,z}(\mathbf{D}'_\tau = q ) \) la probabilité d'atteindre l'état absorbant \(q\) en partant de \(i\). Alors \(b_{iq}\) 
+         est l'élément \(iq\) de la matrice 
+         \[
+            B = NR
+         \]
+
+    </p>
+
+    <p>
+      Prouvons 1. 
+        \[
+      \begin{aligned}
+      \sum_{j=1}^{m-r} n_{ij}
+      &= \sum_{j=1}^{m-r}
+      \mathbb{E}^{i,z}\!\left[\sum_{k \ge z} \mathbf{1}_{\{\mathbf{D}'_k=j\}}\right]
+      = \mathbb{E}^{i,z}\!\left[\sum_{k \ge z} \mathbf{1}_{\{\mathbf{D}'_k \le m-r\}}\right] \\
+      &= \sum_{k \ge z} \mathbb{P}^{i,z}(\tau > k)
+      = \sum_{k \ge z}\sum_{\ell \ge k+1} \mathbb{P}^{i,z}(\tau=\ell) \\
+      &= \sum_{\ell \ge 1}\sum_{k=z}^{\ell-1} \mathbb{P}^{i,z}(\tau=\ell)
+      = \sum_{\ell \ge 1} (\ell-z)\,\mathbb{P}^{i,z}(\tau=\ell) \\
+      &= \mathbb{E}^{i,z}[\tau - z].
+      \end{aligned}
+      \]
+    </p>
+
+    <p>
+      Prouvons 2. <br>
+
+      Pour atteindre un état absorbant \(q > m-r\), il existe un temps \(k\) tel que \( \mathbf{D}'_k \leq m-r\) et \(\mathbf{D}'_{k+1}=q\, \). 
+      Par conséquent : 
+
+      \[
+        \begin{aligned}
+
+        b_{iq}
+        &= \mathbb{P}^{i,z}(X_\tau = q) =\sum_{k \ge z}
+        \mathbb{P}^{i,z}(X_k \le m-r,\; X_{k+1}=q) \\
+
+        &= \sum_{k \ge z}\sum_{\ell=1}^{m-r}
+        \mathbb{P}^{i,z}(X_k=\ell)\,
+        \mathbb{P}^{k,\ell}(X_{k+1}=q) \\[2pt]
+
+        &= \sum_{k \ge z}\sum_{\ell=1}^{m-r}
+        (Q^{k-z})_{i\ell}\, R_{\ell q} \\[2pt]
+
+        &= \sum_{k \ge z} (Q^{k-z} R)_{iq} \\[2pt]
+
+        &= (NR)_{iq}. 
+        \end{aligned}
+        \]
+    </p>
+
+    <p>
+      <b> Espérance de Stand </b>
+    </p>
+
+    <p>
+      Le deuxième point de la proposition \(8\) permet de calculer pour tout \(q \in [\![17, 26]\!]\)  les lois de  : 
+      \[ \mathbb{P}(\mu \circ \mathbf{D}_\tau = q \, \cap \, \mathbf{D}_\tau \neq e_{A,10}  \mid  \sigma(\mathbf{D}_1)) = 
+      \mathbb{P}(\mu \circ \mathbf{D}_\tau = q \, \cap \, \mathbf{D}_\tau \neq e_{A,10} \mid  \sigma(\mathbf{D}'_1)). \]
+      Ainsi que la loi 
+      \(\mathbb{P}(\mathbf{D}_\tau = e_{A,10} \mid  \sigma(\mathbf{D}_1)) = \mathbb{P}(\mathbf{D}_\tau = e_{A,10} \mid  \sigma(\mathbf{D}'_1)) \), et ainsi obtenir pour tout \(j \in K \) la quantité \(\mathbb{E}[G_n \mid \mathbf{R}_n = j] \), avec 
+      \(\mathbf{R}_n = (\mathbf{S} , \mathbf{H}_n ,\mathbf{D}_1)\).
+    </p>
+
+    <p>
+      Pour une mise \(\alpha = 1\), \(\mathbf{S}(c) = \frac{1}{13}\) pour tout \(c \in E \), on obtient le tableau suivant d'espérance de gain, comme fonction de la carte du croupier \(\mathbf{D}_1\)
+      et le score de la main du joueur \( \mu \circ \mathbf{H}_n\ \) pour \(n \geq 2\) (le score minimum est une paire de deux), en distinguant le cas du Blackjack \( \mathbf{H}_n = e_{A,10} \).
+      <br >
+    </p>
+    
+
+    <figure style="text-align:center;">
+    <img src="{{ url_for('static', filename='images/heatmap_W0.png') }}" alt="Table de blackjack" width="700">
+      <figcaption> <strong>Figure 1.</strong>  Espérance de gain du joueur \(\mathbb{E}[G_n \mid \mathbf{R}_n ] \)</figcaption>
+    </figure>
+
+
+    <p>
+      <br /> 
+      Lorsque le joueur décide de Stand, son espérance est négative et égale pour tout score inférieur ou égale à \(16\). <br>
+      A l'inverse \(\mathbb{E}[G_n \mid \mathbf{R}_n ] > 0\) 
+      lorsque \( \mu \circ \mathbf{H}_n\ \geq 20\) pour tout \(n \geq 0\) et \(\mathbf{D}_1 \in E\).
+    </p>
+
+
+
+    <h3 id="2.2"> II.2 Résolution  par programmation dynamique pour le cas \(N \in \mathbb{N}^*\)</h3>
+
+     <p>
+      <b> Proposition 9.  \(\quad \)</b> Pour \(N \in \mathbb{N}^* \, \), \(m \geq 0\), et \(n \geq 1\) on a pour toute fonction bornée borélienne \(f\) : 
+       \[
+        \mathbb{E}[f(\mathbf{D}_{n}) \mid \sigma(\mathbf{R}_m)] = \mathbb{E}[f(\mathbf{D}_{n}) \mid \sigma(\mathbf{D}_1, \mathbf{S}_{m})]
+      \]
+    </p>
+
+    <p>
+      <b> Construction du vecteur \( \mathbf{D'}_n\)</b>
+    </p>
+
+    <p>
+      Pour \(N \in \mathbb{N}^*\), soit  \( \mathbf{D'}_n\) le vecteur aléatoire à valeur dans \( \mathbb{N}^E \times \mathbb{N}^E\) définit pour tout \(n \geq 1\) par : 
+
+      \[ \mathbf{D'}_n = ( \mathbf{D}_{n \wedge \tau}, \, \mathbf{S}_{\psi(n \wedge \tau)} )  
+      \] 
+  
+      Par rapport au cas du sabot infini, on utilise l'information du sabot à l'instant \(\psi(n)\). On utilisera de plus que :
+      \[
+        \mathbf{D'}_0 = ( \mathbf{0}_E, \,  \mathbf{S}_{\psi(1)-1})
+      \]
+    </p>
+
+    <p>
+      Et que le croupier tire ses cartes à la suite à partir de sa deuxième carte i.e pour tout \(n \geq 2 \, \) : \( \psi(n) = \psi(1) + n - 1 \).
+    </p>
+
+     <p>
+      <b> Proposition 10. \(\quad \)</b> Pour \(N \in \mathbb{N}^* \, \), \( (\mathbf{D}'_n)_{n \geq 0 } \) possède la propriété forte de Markov. De plus, c'est une chaîne homogène pour tout \( n \geq 1\) et 
+      \( (i,j) \in (\mathbb{N} \times \{0,1\}^3) \times (\mathbb{N} \times \{0,1\}^3) \), tels que \( \mathbb{P}(\mathbf{D}'_{n}=i) > 0 \) et \( \ \mathbb{P}(\mathbf{D}'_{n-1}=i) > 0 \)  : 
+      \[
+         \mathbb{P}(\mathbf{D}'_{n+1} = j \mid \mathbf{D}'_{n} = i) =  \mathbb{P}(\mathbf{D}'_{n} = j \mid \mathbf{D}'_{n-1} = i)
+      \]
+
+      Cette propriété est facilement vérifiable. Notons qu'en prenant la définition de \( \mathbf{D'}_n\) pour le cas \( N = \infty\), la propriété n'est plus vrai. 
+    </p>
+
+    <p>
+      Il existe donc une matrice de transition \(P\) fini associée à cette chaîne. En revanche, cette matrice peut être bien plus grande que le cas \(N= \infty\). 
+      En effet pour peu que \(N\) soit suffisamment grand et qu'il reste beaucoup de cartes à l'état \(\psi(1)-1\) du sabot (i.e avant que le croupier pioche sa première carte), on se retrouve avec
+      un nombre important de combinaisons de tirages à devoir dénombrer.  
+    </p>
+
+    <p>
+      Notons que le vecteur suivant à valeur dans \( \mathbb{N} \times \{0,1\}^3 \times \mathbb{N}^E\) et valant : 
+      \[ (\mu \circ \mathbf{D}_{n \wedge \tau}, \ \eta \circ \mathbf{D}_{n \wedge \tau}, \ \mathbb{1}_{\{\mathbf{D}_{n \wedge \tau} = e_{A,10}\}}, \ 
+      \mathbb{1}_{\{\mathbf{D}_{n \wedge \tau} = e_{10}\}}, \ \mathbf{S}_{\psi(n \wedge \tau)} )  
+      \] 
+
+      aurait également pu servir de candidat à \( \mathbf{D}'_n \) puisque ces deux vecteurs ont un support en bijection et respectant la proposition 10. 
+    </p>
+
+    <p>
+      Via des méthodes numériques, on peut de plus montrer que \( \# \text{supp}(\mathbf{D}'_{n})  \leq 3632\). 
+    </p>
+
+  
+
+    <p>
+      Puisque \( \# \text{supp}(\mathbf{D}'_{n}) \in \mathbb{N}^* \), on peut de nouveau utiliser une bijection de cet espace sur \( \{ 1, \dots, m\} \) avec \(m \in \mathbb{N}^*\),
+      et utiliser la matrice de transition \(P\) d'élément \(p_{ij}\) définit pour tout \(n \geq 0, \, (i,j) \in \{1, \dots, m\}^2 \) tels que \(\mathbb{P}(\mathbf{D'}_n=i) > 0\) par :
+      \[
+      p_{ij} = \mathbb{P}^{i,n}(\mathbf{D'}_{n+1}=j) = \mathbb{P}(\mathbf{D'}_{n+1}=j \mid \mathbf{D'}_n=i)
+      \]
+    </p>
+
+    <p>
+      <b> Equation Backward de Kolomorov et problème de Dirichlet pour les chaînes homogènes discrètes</b>
+    </p>
+
+     <p> Plutôt que de devoir construire entièrement la matrice \(P\) et inverser \(I-Q\) montrons que l'on peut résoudre le problème de manière fonctionnelle via programmation dynamique.</p>
+
+
+    <p>
+      <b> Proposition 11. \(\quad\)</b> Soit \( (\mathbf{D}'_n)_{n \geq 0 } \) une chaîne de Markov homogène sur un espace \( \{1, \dots, m\} \) et de noyeau \(P\) d'éléments \(p_{ij}\)
+       et soit \(f\) une fonction borélienne borné. On définit la suite \( (u_n)_{n \geq 0} \) définit pour tout \(n \geq 0\) et \(i \in \{1, \dots, m\} \) par : 
+
+      \[
+      \left\{
+              \begin{array}{ll}
+                  u_n(i) =  \mathbb{E}^{i,0}[f(\mathbf{D}'_{n})] = \mathbb{E}[f(\mathbf{D}'_{n}) \mid \mathbf{D}'_{0} = i] \\
+                  u_0(i) = f(i)
+              \end{array}
+          \right.
+
+          \quad \text{avec} \quad
+
+          u_n = \begin{pmatrix}
+        u_n(1) \\
+        \vdots \\
+        u_n(m)
+        \end{pmatrix}
+      \]
+
+      Alors : \( \, \displaystyle u_{n+1}(i) = \sum_{k=1}^m  p_{ik} \, u_n(k). \quad \) Autrement dit, \(u_{n+1} = P u_n  \, \) et \( \, u_n = P^n f  \) <br>  
+      Cette propriété correspond à l'équation Backward de Kolmogorov en espace fini et à état discret. Prouvons la proposition : 
+    </p>
+
+    <p>
+      \[
+      \begin{aligned}
+      u_{n+1}(i)
+      &= \mathbb{E}\!\left[f(\mathbf{D}'_{n+1}) \mid \mathbf{D}'_0 = i \right]  \\
+      &= \sum_{j=1}^{m} f(j)\,\mathbb{P}(\mathbf{D}'_{n+1}=j \mid \mathbf{D}'_0=i) \\[2pt]
+      &= \sum_{j=1}^{m}\sum_{k=1}^m f(j)\,
+        \mathbb{P}(\mathbf{D}'_{n+1}=j \mid \mathbf{D}'_{1}=k)\,
+        \mathbb{P}(\mathbf{D}'_{1}=k \mid \mathbf{D}'_{0}=i) \\[2pt]
+      &= \sum_{j=1}^{m}\sum_{k=1}^m f(j)\,
+        \mathbb{P}(\mathbf{D}'_{n}=j \mid \mathbf{D}'_{0}=k)\,p_{ik} \\[2pt]
+      &= \sum_{k=1}^m
+        \left(
+            \sum_{j} f(j)\,
+            \mathbb{P}(\mathbf{D}'_n=j \mid \mathbf{D}'_0=k)
+        \right)
+        p_{ik} \\[2pt]
+      &= \sum_{k=1}^m u_n(k)\,p_{ik}
+      \end{aligned}
+      \]
+    </p>
+
+   
+    <p>
+    <b>Proposition 12. \(\quad\)</b> Soit \( (\mathbf{D}'_n)_{n \geq 0 } \) une chaîne de Markov homogène absorbante sur \( \{1, \dots, m\} \), composé de \(r\) états absorbants
+    tels que \(0 \leq r < m\), et de noyeau \(P\) d'éléments \(p_{ij}\). <br>
+    Soit \( \mathcal{T} = \{ m - r + 1 , m \}\) le sous ensemble constituant les états absorbants de la chaîne et soit \(f : \mathcal{T} \to \mathbb{R}\) bornée. <br>
+    Soit  \(\tau = \text{inf}\{n \geq 1 : \mathbf{D}'_n > m -r\} = \text{inf}\{n \geq 1 : \mathbf{D}'_n \in \mathcal{T}\} \) le temps d'arrêt avant absortion. <br>
+    Soit \((u_n)_{n \geq 0}\) la suite définie par
+    \(u_0 = f \), \(u_{n+1} = P u_n \, \).  Alors :
+    </p>
+    <p>
+    \(1. \quad \mathbf{D}'_n \xrightarrow[n \to \infty]{} \mathbf{D}'_\tau \quad \text{p.s.}\)
+    </p>
+    <p>
+    \(2. \quad \) Pour tout \(i \in  \{1, \dots, m\}\) et pour tout \(k \geq 0 \) :
+    \[
+        u_n(i) \;\xrightarrow[n \to \infty]{} u(i) = \mathbb{E}^{i, k \wedge \tau }\!\left[f(\mathbf{D}'_{\tau})\right] =  \mathbb{E}\!\left[f(\mathbf{D}'_{\tau}) \mid \mathbf{D}'_{k \wedge \tau } = i  \right]
+    \]
+    </p>
+    <p>
+    \(3. \quad  u\) est l'unique solution bornée du problème de Dirichlet :
+    \[
+        \begin{cases}
+            u(i) = f(i)    & i \in \mathcal{T}    \\[1pt]
+            u(i) = (Pu)(i) = \sum_{j=1}^m p_{ij} \, u(j) & i \notin \mathcal{T}
+        \end{cases}
+    \]
+    </p>
+
+    <p>
+      Preuve :  <br>
+      Le point \(1.\) découle de la définition de \( \mathbf{D}'_n \). <br>
+      Le point \(2.\) Par convergence dominée on a \( u_n(i) = \mathbb{E}^{i,0}[f(\mathbf{D}'_n)] \;\xrightarrow[n \to \infty]{} \mathbb{E}^{i,0}[f(\mathbf{D}'_\tau)].  \quad \)
+      Puisque la chaîne est homogène, pour tout \(k \geq 0\) \( \mathbb{E}^{i,0}[f(\mathbf{D}'_\tau)] = \mathbb{E}^{i,k \wedge \tau}[f(\mathbf{D}'_{k \wedge \tau})] \). <br>
+      
+    </p>
+
+    <p>
+      \(3.\) Supposons que \(u\) et \(v\) soient deux solutions bornées du problème de Dirichlet,
+      et posons \(h = u - v\). Alors \(h\) satisfait :
+      \[
+      \begin{cases} h(i) = 0 & i \in \mathcal{T} \\ h(i) = (Ph)(i) & i \notin \mathcal{T} \end{cases}
+      \]
+      </p>
+      <p>
+      Prouvons que la chaîne \(h(\mathbf{D}'_n)\) est une martingale. Pour tout \(n < \tau \) et tout \(k \geq 0\) on a : 
+      
+      \[
+      \mathbb{E}^{i, k \wedge n }[h(\mathbf{D}'_{n+1}) \mid  \sigma(\mathbf{D}'_{n}, \dots, \mathbf{D}'_{n})] = (Ph)(\mathbf{D}'_n) = h(\mathbf{D}'_n)
+      \]
+      et pour \(n \geq \tau\), la chaîne est figée et vaut \(h(\mathbf{D}'_{n+1}) = h(\mathbf{D}'_n) = 0\). <br>
+      Ainsi \(h(\mathbf{D}'_n)\) est bien une martingale et plus particulièrement avec la loi pour \(\mathbf{D}'_{k \wedge n } = i\) fixé  : 
+      \[
+       \mathbb{E}^{i,k \wedge n }[h(\mathbf{D}'_{n})] =\mathbb{E}^{i,k \wedge n }[h(\mathbf{D}'_{k \wedge n })] = h(i) 
+      \]
+      </p>
+
+      <p>
+      Puisque \(\mathbf{D}'_n \to \mathbf{D}'_\tau\) p.s.
+      et \(h\) est bornée, le théorème de convergence dominée donne :
+      \[
+      h(i) = \lim_{n \to \infty} \mathbb{E}^{i,k \wedge n }[h(\mathbf{D}'_{n})] = \mathbb{E}^{i,k \wedge n }\!\left[h(\mathbf{D}'_{\tau})\right]
+      \]
+      Or \( \mathbf{D}'_{\tau} \in \mathcal{T}\) et \(h = 0\) sur \(\mathcal{T}\), donc \(h(i) = 0\) pour tout \(i \in  \{1, \dots, m\}\),
+      ce qui donne \(u = v\). \(\square\)
+    </p>
+
+    <p>
+     <br>
+     Dans notre cas d'étude, on a \(\mathcal{T} = \{(\mathbf{D}, \mathbf{S})  \in \text{supp}(\mathbf{D'}_n) \mid \mu \circ a \geq 17 \} \).
+     Pour calculer la quantité \( \mathbb{P}(\mu \circ \mathbf{D}_\tau = q \, \cap \, \mathbf{D}_\tau \neq e_{A,10} \mid  \mathbf{D}'_1 = (\mathbf{D}, \mathbf{S})  ) \) 
+     pour tout score \(q \in [\![17, 26]\!]\) hors Blackjack et tout \( (\mathbf{D}, \mathbf{S})  \in \mathbb{N}^E \times \mathbb{N}^E \) tels que \( \, \mathbb{P}(\mathbf{D}'_1 = (\mathbf{D}, \mathbf{S})  ) > 0 \) 
+     , il suffit de choisir \(f : \mathcal{T} \to \{0,1\} \) avec \((\mathbf{D}, \mathbf{S})  \in \mathcal{T}\) tels que : 
+     \[
+      f(\mathbf{D}, \mathbf{S})  = \mathbb{1}_{\mu \circ \mathbf{D} = q \, \cap \, \mathbf{D} \neq  e_{A,10} }
+     \]
+
+     Et donc finalement le problème de Dirichlet revient à :
+     
+     \[
+        \begin{cases}
+            u(\mathbf{D}, \mathbf{S})  = f(\mathbf{D}, \mathbf{S})  = \mathbb{1}_{\mu \circ \mathbf{D} = q \, \cap \, \mathbf{D} \neq  e_{A,10} }   & (\mathbf{D}, \mathbf{S})  \in \mathcal{T}    \\[1pt]
+            u(\mathbf{D}, \mathbf{S})  = \sum_{c \in E } \cfrac{\mathbf{S}(c)}{\sum_{e \in E}\mathbf{S}(e)} \, u(\mathbf{D} + e_c, \mathbf{S} - e_c) & (\mathbf{D}, \mathbf{S})  \notin \mathcal{T}
+        \end{cases}
+    \]
+
+    Remarquons qu'il n'est pas nécessaire d'itérer sur la matrice de transition, mais seulement sur l'ensemble des éléments de \(E\) à \(10\) éléments.
+
+
+     Pour calculer la probabilité de blackjack, il suffit de prendre 
+
+     \(
+     \displaystyle f(\mathbf{D}, \mathbf{S})  = \mathbb{1}_{ \mathbf{D} =  e_{A,10} }
+     \), pour calculer la probabilité de Bust, c'est : \(\displaystyle f(\mathbf{D}, \mathbf{S})  = \mathbb{1}_{ \mu \circ \mathbf{D} > 21 }\) 
+    </p>
+
+    <p>
+      Le code suivant permet de calculer de manière récursive la probabilité d'état d'absortion pour tout score hors Blackjack i.e  avec 
+      \(f(\mathbf{D}, \mathbf{S})  = \mathbb{1}_{\mu \circ \mathbf{D} = q \, \cap \, \mathbf{D} \neq  e_{A,10} }\), en fonction de la main de départ du croupier \(\mathbf{D}\) et de l'état du sabot \(\mathbf{S}\) : 
+    </p>
+
+
+      <div class="pseudo-code">
+        <b>function</b> \(\text{u}(\mathbf{D}, \mathbf{S}, \text{target})\)
+            <b>if</b> \( \mu(\mathbf{D}) = \text{target} \) <b>AND</b> \( \mathbf{D} \neq e_{A,10} \) :
+                <b>return 1</b>
+            <b>if</b> \( \mu(\mathbf{D})\geq 17\) :
+                <b>return 0</b>
+            \(p \leftarrow 0\)
+
+            <b>for each</b> \(v \in \{0,\dots,9\}\) :
+                <b>if</b> \(\mathbf{S}[v] \leq  0\) :
+                  <b>continue</b>
+                \(\mathbb{P}(v) \leftarrow \dfrac{\mathbf{S}[v]}{\text{sum}(\mathbf{S})} \)
+                \(\mathbf{S}' \leftarrow \mathbf{S}\)  
+                \(\mathbf{S}'[v]  \leftarrow  \mathbf{S}'[v] - 1 \)
+                \(\mathbf{D}' \leftarrow \mathbf{D}\)  
+                \(\mathbf{D}'[v]  \leftarrow  \mathbf{D}'[v] + 1 \)
+
+                \(p \leftarrow p
+                + \mathbb{P}(v)\;
+                u(\mathbf{D}', \mathbf{S}', \text{target})
+                \)
+
+            <b>return</b> \(p\)
+      </div>
+
+      <div class="caption">
+    <strong>Algorithme 1.</strong> Probabilité d'absortion du croupier par score pour le cas \(N \in \mathbb{N}^*\)
+    <br>
+    <br>
+    </div>
+
+
+    <p>
+      Pour plus de détail sur l'implémentation et les détails de calcul, voir la partir sur GitHub.
+    </p>
+
+
+  
+
+  <h2 id="3">III. Processus de décision Markovien (PDM), stratégie d'arrêt du joueur</h2>
+
+  <p>
+    L'objectif de cette partie est de calculer l'espérance en cas de tirage du joueur (Hit) puis l'esperance du Split. Lorsque le split n'est pas possible le joueur a la possibilité de tirer tant que son score est inférieur ou égal à 21.
+    Comme pour la partie <b>II.</b>, on introduit le vecteur aléatoire \(\mathbf{H}'_n\) valant pour tout \(n \geq 0\) : 
+    \[
+      \mathbf{H}'_n =
+      \begin{cases}
+      (\mu \circ \mathbf{H}_{n \wedge \kappa}, \ \eta \circ \mathbf{H}_{n \wedge \kappa}, \ \mathbb{1}_{\{\mathbf{H}_{n \wedge \kappa} = e_{A,10}\}}, \ \mathbb{1}_{\{\mathbf{H}_{n \wedge \kappa} = e_{10}\}}),
+      & \text{si }  N = \infty \\[4pt]
+      (\mathbf{H}_{n \wedge \kappa}, \ \mathbf{S}_{\phi(n \wedge \kappa )}),
+      & \text{si } N \in \mathbb{N}^*
+      \end{cases}
+      \]
+
+    Les propriétés de Markov précédemment énoncées pour \((\mathbf{D}'_n)_{n \geq 0}\) sont également vraies par construction pour \((\mathbf{H}'_n)_{n \geq 0}\).  
+
+  </p>
+
+  <p>
+    Dans une première partie, nous donnerons la définition d'un Processus de Decision Markovien et quelques propriétés essentielles. Puis, pour \(N = \infty\), nous calculerons les espérance de Hit, Split et Double, pour déterminer 
+    le choix optimal dont les résultats seront présentés dans le tableau \(4.\)
+  </p>
+
+  <p>
+    Enfin dans une troisième partie, on s'intéressera au cas du sabot fini, en se penchant sur les méthodes de calculs pour le Split, sa résolution étant non trivial. 
+  </p>
+
+  <h3 id="3.1">III.1 Définitions et propriétés</h3>
+
+     <p>
+        <b> Définition Formelle </b>
+    </p>
+
+    <p>
+      Un PDM se définit comme le quadruplet \(\{S, A, \mathcal{P}, \mathcal{R}\}\). 
+      On se donne pour tout \(t \geq 0\) trois suites de v.a discrètes :
+      \((S_t)_{t \geq 0}\) à valeurs dans \(S\), \((A_t)_{t \geq 0}\) à valeurs dans \(A\),
+      et \((R_t)_{t \geq 0}\) à valeurs dans \(\mathbb{R}\),
+      représentant respectivement les états, les actions choisies et les récompenses reçues au cours du temps.
+    </p>
+    <ul>
+      <li>
+        <b>Un espace d'états \(S\)</b>, sur lequel est définie la suite \((S_t)_{t \geq 0}\).
+      </li>
+
+      <li>
+        <b>Un ensemble d'actions \(A\)</b>,  sur lequel est définie la suite \((A_t)_{t \geq 0}\). <br>
+        De plus, \((S_t)_{t \geq 0}\) est une chaîne de Markov controlée par rapport à \((A_t)_{t \geq 0}\), au sens où pour tout \(t \geq 0 \): 
+        \[
+          \mathbb{P}(S_{t+1} \mid S_0, A_0, \dots, S_t, A_t) = \mathbb{P}(S_{t+1} \mid S_t, A_t)
+        \]
+      </li>
+
+      <li>
+        <b>Une fonction de transition</b> \(\mathcal{P} : S \times A \times S \to [0,1]\), définie pour \(a \in A\) et \((s, s') \in S^2\) 
+        tels que \( \mathbb{P}(S_t = s , A_t = a) > 0 \) par :
+        \[
+          \mathcal{P}^a_{s,s'} = \mathcal{P}(s, a, s') = \mathbb{P}(S_{t+1} = s' \mid S_t = s,\, A_t = a),
+        \]
+        qui représente la probabilité de transiter vers l'état \(s'\) depuis l'état \(s\) en exécutant l'action \(a\). Cette probabilité est indépendante de \(t\) i.e 
+        le système est homogène. On note \(\mathcal{P}^a = \bigl(\mathcal{P}^a_{s,s'}\bigr)_{s,s' \in S}\) la matrice de transition associée à l'action \(a\).
+      </li>
+
+      <li>
+        <b>Une fonction de récompense</b> \(\mathcal{R} : S \times A \to \mathbb{R}\), définie à partir d'une récompense instantanée \(r : S \times A \times S \to \mathbb{R}\) par :
+        \[
+          \mathcal{R}^a_{s} = \mathcal{R}(s, a) = \sum_{s' \in S} r(s, a, s')\, \mathcal{P}^a_{s,s'} = \mathbb{E}[R_{t+1} \mid S_t = s,\, A_t = a],
+        \]
+        où \(r(s, a, s')\) est la récompense reçue lors du passage de \(s\) à \(s'\) sous l'action \(a\).
+        On note \(\mathcal{R}^a = \bigl(\mathcal{R}(s, a)\bigr)_{s \in S}\) le vecteur de récompense associé à l'action \(a\).
+      </li>
+    </ul>
+
+    <p>
+       Un PDM est dit absorbant ou à horizon fini si p.s on atteint un état absorbant où \( \mathcal{P}(s, a, s) = 1 \) pour tout \(a \in A\).
+    </p>
+    <br>
+
+    <p>
+        <b> Politique </b>
+    </p>
+
+      <p>
+      Une politique \( \pi \) décrit les choix des actions à jouer par l'agent dans chaque état. <br>
+      Une politique peut être déterministe avec \(\pi : S \ \to A\) qui donne, pour chaque \(s \in S\), le choix d'action \(a \in A\) a effectué. <br>
+      Elle peut ausi être stochastique avec \(\pi : S \times A \ \to [0,1]\) en notant \(\pi(a \mid s) = \mathbb{P}(A_{t}= a \mid S_t = s)\). Une politique est toujours
+      stationnaire i.e \(A_t \backsim \pi (.\mid S_t), \, \forall t>0\)
+    </p>
+    
+    <p> 
+      Pour une politique \(\pi\) donnée, un processus de décision markovien (PDM) 
+      peut être vu comme une chaîne de Markov avec récompense, 
+      définie par le triplet \(\{S, \mathcal{P}^\pi, \mathcal{R}^\pi\}\), où :
+  <ul>
+    <li>
+      \(\mathcal{P}^\pi\) désigne la matrice de transition sous la politique \(\pi\).  
+      Si \(\pi\) est déterministe, on a que \(\mathcal{P}^\pi\) est composé des éléments \(\mathcal{P}^\pi_{s,s'} = \mathcal{P}(s,\pi(s),s') \).
+      Si \(\pi\) est stochastique (i.e. suit une distribution sur les actions) :
+      \[
+        P^\pi_{s,s'} = \sum_{a \in A} \pi(a \mid s)\, P^a_{s,s'}.
+      \]
+    </li>
+
+    <li>
+      \(\mathcal{R}^\pi\) est le vecteur des récompenses espérées sous la politique \(\pi\). <br>
+      Pour tout \(a i\)  
+      Dans le cas déterministe, \(\mathcal{R}^\pi\) est composé des \(\mathcal{R}^\pi_s = \mathcal{R}(s, \pi(s)) \). Dans le cas stochastique : 
+      \[
+        \mathcal{R}^\pi_s = \sum_{a \in A} \pi(a \mid s)\, \mathcal{R}^a_s = \sum_{a \in A} \sum_{s \in S} \pi(a \mid s) \, r(s, a, s')\, \mathcal{P}^a_{s,s'}.
+      \]
+      Dans les deux cas on a que \(\mathcal{R}^\pi_s = \mathbb{E}_\pi[R_{t+1} \mid S_t = s] \) qui désigne l'espérance suivant la politique \(\pi\).
+    </li>
+  </ul>
+    <br>
+    </p>
+
+
+
+    <p>
+        <b> Fonctions de valeurs d'états </b>
+    </p>
+
+
+     <p>
+     Pour chaque intant \(t  \geq 0\), on note \(B_t\) le cumul des récompenses actualisé et valant :
+
+    \[ B_t = R_{t+1} + \gamma \, R_{t+2} + ... =  \sum_{k=0}^{\infty} \gamma^t R_{t+k-1}\]
+
+    où \(\gamma \in [0,1[\) est un facteur d'actualisation qui pondère l'importance des récompenses futures.
+    </p>
+
+
+    <p>
+      Soit  la fonction de valeur des états \(V_{\pi} : S \to \mathbb{R}\) qui est le gain espérée si l'agent commence à l'état \(s\) et applique ensuite la politique \(\pi\) ad infinitum : 
+
+       \[V_\pi(s) = \mathbb{E}_{\pi}[B_t \,\big|\, S_t = s] \]
+    </p>
+
+    <p> Soit la fonction de valeur des états-actions  \(Q_{\pi} : S \times A \to \mathbb{R}\) qui représente le gain engrangé par l’agent s’il démarre à l’état \(s\), 
+          commence par effectuer l’action \(a\), puis applique la politique \(\pi\) ad infinitum.
+
+          \[Q_\pi(s, a) = \mathbb{E}_{\pi}[B_t \,\big|\, S_t = s, A_t = a] \]
+      </p>
+
+
+      <p>
+      On a également cette relation se vérifiant pour tout \(s \in S\) : 
+       \[
+      V_{\pi}(s) = Q_{\pi}(s, \pi(s)).
+      \]
+      </p>
+
+
+    <p>
+      <br> 
+      <b> Proposition 13. \(\quad \)</b> Pour tout \(t \geq 0, \, s \in  S\) tels que \( \mathbb{P}(S_t =s) > 0 \), la fonction de valeur des états 
+       \(V_{\pi}(s)\) vérifient une relation de récurrence appelée équation de Bellman :
+      \[
+       \displaystyle V_\pi(s) = \mathcal{R}^\pi_s  + \gamma \sum_{s' \in S} \mathcal{P}^\pi_{s,s'}  \, V_\pi(s')
+      \]  
+
+      Qui a comme solution directe sous forme matricielle : 
+
+      \[
+           V_\pi = (I - \gamma \mathcal{P}^\pi)^{-1} \mathcal{R}^\pi
+      \]
+
+      Preuve : 
+
+      \[
+      \begin{aligned}
+      V_\pi(s) 
+      &= \mathbb{E}_\pi[B_t \mid S_t = s] \\[4pt]
+      &= \mathbb{E}_\pi[R_{t+1} + \gamma R_{t+2} + \gamma^2 R_{t+3} + \dots \mid S_t = s] \\[4pt]
+      &= \mathbb{E}_\pi[R_{t+1} + \gamma (R_{t+2} + \gamma R_{t+3} + \dots) \mid S_t = s] \\[4pt]
+      &= \mathbb{E}_\pi[R_{t+1} + \gamma G_{t+1} \mid S_t = s] \\[4pt]
+      &= \mathbb{E}_\pi[R_{t+1} \mid S_t = s] + \gamma \, \mathbb{E}_\pi[G_{t+1} \mid S_t = s] \\[4pt]
+      &= \mathcal{R}^\pi_s + \gamma \sum_{s' \in S} \mathcal{P}^\pi_{s,s'}  \, \mathbb{E}_\pi[G_{t+1} \mid S_{t+1} = s', S_t = s] \\[4pt]
+      &= \mathcal{R}^\pi_s + \gamma \sum_{s' \in S} \mathcal{P}^\pi_{s,s'}  \, \mathbb{E}_\pi[G_{t+1} \mid S_{t+1} = s'] \\[4pt]
+      &= \mathcal{R}^\pi_s  + \gamma \sum_{s' \in S} \mathcal{P}^\pi_{s,s'}  \, V_\pi(s') 
+      \end{aligned}
+      \]
+
+      Puis : 
+
+        \[
+        \begin{aligned}
+        V_\pi &= \mathcal{R}^\pi + \gamma \mathcal{P}^\pi V_\pi \\[4pt]
+        (I - \gamma \mathcal{P}^\pi) V_\pi &= \mathcal{R}^\pi \\[4pt]
+        V_\pi &= (I - \gamma \mathcal{P}^\pi)^{-1} \mathcal{R}^\pi
+        \end{aligned}
+        \]
+
+    </p>
+
+    <p>
+      Une conséquence directe est que : 
+      \[
+      Q_{\pi}(s, a) = \mathcal{R}^a_s  + \gamma \sum_{s' \in S} \mathcal{P}^a_{s,s'}  \, V_\pi(s') 
+      \]
+      <br>
+    </p>
+
+
+    
+    <p>
+        <b> Fonctions et politique optimales, équations d'optimalités de Bellman </b>
+    </p>
+
+     <p>
+      La fonction optimale de valeur des états \(V^*\) est la fonction qui a la valeur maximale pour toute politique et tout état \(s \in S\) : 
+      \[V^*(s) =  \max_{\pi}V_\pi(s)\] 
+    </p>
+
+    <p>
+      La fonction optimale de valeur des états-actions \(Q^*\) est la fonction qui a la valeur maximale pour toute politique et tout \(s \in S\) et \(a \in A\)  : 
+      \[Q^*(s,a) =  \max_{\pi}Q_\pi(s,a) \]
+    </p>
+
+
+    <p>
+    On peut définir un ordre partiel sur l'ensemble des politiques, noté \(\preceq\), tel que :
+    \[
+    \pi \preceq \pi' \;\;\Longleftrightarrow\;\; \forall s \in S, \; V_\pi(s) \leq V_{\pi'}(s)
+    \]
+    </p>
+
+     <p>
+        <br> 
+        <b> Proposition 14. \(\quad \)</b> Pour tout Processus de Decision Markovien,  
+
+        <ul>
+        <li>
+          il existe une politique optimale \(\pi^*\) qui est meilleure ou égale à tout autre politique, i.e \( \, \,  \forall \pi, \; \pi \preceq \pi^* \)
+        </li>
+        <li>
+          toute politique optimale partage la même fonction optimale des valeurs des états, i.e \( \, \, \forall s \in S, \,  V_{\pi^*}(s) = V^*(s)\) 
+        </li>
+        <li>
+          toute politique optimale partage la même fonction optimale des valeurs des états-actions, i.e \( \, \, \forall s \in S, a \in A,  \,  Q_{\pi^*}(s,a) = Q^*(s,a)\) 
+        </li>
+      </ul>
+      <br>
+    </p>
+
+
+    <p>
+      La politique optimale \( \pi\) est facilement déterminée à partir de \( Q^*(s, a)\). Il suffit dans un état \(s\) de choisir l'action \(a\)
+      qui maximise \( Q^*(s, a)\). Soit :
+      
+      \[
+      \pi^*(s) = \text{arg}\max_{a \in A} Q^*(s,a)
+      \]
+
+      Ou encore si \(\pi^*\) est stochastique :
+      
+      \[
+      \pi^*(a \mid s) =
+      \begin{cases}
+      1 & \text{si } a =  \text{arg}\max_{a \in A} Q^*(s,a) \\
+      0 & \text{sinon }
+      \end{cases}
+      \]
+
+      Il existe donc toujours une politique optimale déterministe. On a de plus que : 
+    </p>
+
+    <p>
+    \[
+    V^*(s) = \max_{a \in A} Q^*(s, a)
+    \]
+
+    \[
+    Q^*(s, a) = \mathcal{R}^a_s  + \gamma \sum_{s' \in S} \mathcal{P}^a_{s,s'}  \, V^*(s') 
+    \]
+
+    Qui nous permettent d'écrire les deux équations d'optimalité de Bellman :  
+
+    \[
+    V^*(s) = \max_{a \in A}\Big(\mathcal{R}^a_s  + \gamma \sum_{s' \in S} \mathcal{P}^a_{s,s'}  \, V^*(s')\Big) 
+    \]
+
+    \[
+    Q^*(s, a) = \mathcal{R}^a_s  + \gamma \sum_{s' \in S} \mathcal{P}^a_{s,s'}  \, \max_{a' \in A} Q^*(s',a')
+    \]
+
+    <br>
+
+    </p>
+
+
+    <p>
+        <b> Résolution des équations d'optimalités via programmation dynamique  </b>
+    </p>
+
+    <p>Pour des PDM finis, les équations de Bellman ont une unique solution non linéaires, indépendante de la politique.</p>
+
+    <p>
+      <b> Proposition 14. \(\quad \)</b> Soit l'opérateur de Bellman optimal \(T\), fonction de \(V:S \to \mathbb{R}\) et défini par : 
+      \[
+        T(V)(s) = \max_{a \in A}\Big(\mathcal{R}^a_s  + \gamma \sum_{s' \in S} \mathcal{P}^a_{s,s'}  \, V(s')\Big)
+      \] 
+      Cet opérateur est une application contractante pour la norme \(L^\infty\) dont \(V^*\) est le point fixe,  i.e \(V^*\) peut être approcher par un processus itératif.
+    </p>
+
+    <p>
+      Preuve : 
+    </p>
+
+    <p>
+      Pour deux fonctions \(V\) et \(W\) dans \(L^\infty(S)\). Pour tout état \(s \in \mathcal{S}\) et \(\gamma \in [0,1[\), on a :
+      \[
+      \begin{aligned}
+      |(TV)(s) - (TW)(s)|
+      &= \Big| \max_a \big\{ \mathcal{R}^a_s + \gamma \sum_{s'} \mathcal{P}^a_{s,s'} V(s') \big\}
+          - \max_a \big\{ \mathcal{R}^a_s + \gamma \sum_{s'} \mathcal{P}^a_{s,s'} W(s') \big\} \Big| \\
+      &\le \max_a \Big| \gamma \sum_{s'} \mathcal{P}^a_{s,s'}  \big( V(s') - W(s') \big) \Big| \\
+      &\le \gamma \max_a \sum_{s'} \mathcal{P}^a_{s,s'}  \, \|V - W\|_\infty \\
+      &= \gamma \, \|V - W\|_\infty \sum_{s'} \mathcal{P}^a_{s,s'} \\
+      &= \gamma \, \|V - W\|_\infty.
+      \end{aligned}
+      \]
+
+      Et donc en prenant le supremum sur s : \( \|(TV)(s) - (TW)(s)|_\infty \leq  \|V - W\|_\infty\)
+    </p>
+
+    <p>
+      Le théorème du point fixe de Banach assure que \(T\) admet un unique point fixe \(V^*\) et donc l'équation d'optimalité a une unique solution.
+      Egalement, pour toute condtition initiale \(V_0\), la suite définie par \(V_{k+1}=TV_k\) converge vers \(V^*\) avec : 
+
+      \[
+          \|V_k - V^*\|_\infty\ \leq \gamma^k \, \|V_0 - V^*\|_\infty\
+      \]
+      Et également commme autre majoration pour l'erreur après \(k \) itérations :
+
+      \[
+          \|V_k - V^*\|_\infty\ \leq \frac{\gamma^k}{1 - \gamma}\|V_0 - V_1\|_\infty\
+      \]
+
+      On appelle le processus itératif \(V_{k+1}=TV_k\) l'algorithme d'Itération sur la valeur (VI)
+
+    </p>
+
+    <p>
+      Notons que \(T\) n'est plus une contraction si \(\gamma = 1\), et la convergence n'est plus assuré, pour cette raison, on fait tendre \(\gamma \to 1\). Dans le cas particulier
+      MDP est fini et possède des états terminaux absorbants atteints presque sûrement, alors l'algorithme onverge même avec \(\gamma = 1\).
+    </p>
+
+    <p>
+     L'algorithme d'itération sur la valeur peut être résumé par : 
+    </p>
+
+    <div class="pseudo-code">
+    <b>for each</b> \(s \in S\)
+        \(V(s) 	\leftarrow 0 \)
+
+    <b>while</b> \(\delta > \epsilon\)
+        \( \delta 	\leftarrow 0 \)
+        <b>for each</b> \(s \in S\)
+            \( v 	\leftarrow V(s) \)
+            \( V(s) 	\leftarrow \displaystyle \max_{a \in A}\Big(\mathcal{R}^a_s  + \gamma \sum_{s' \in S} \mathcal{P}^a_{s,s'}  \, V(s')\Big)\)
+            \( \delta 	\leftarrow \max(\delta,  |v - V(s)|) \)
+        </div>
+
+
+    <div class="caption">
+    <strong>Algorithme 1.</strong> Itération sur la valeur (VI)
+    <br>
+    <br>
+    </div>
+
+     <h3 id="3.2">III.2 PDM pour le cas \(N = \infty\), Calcul d'espérance de Hit et Split du joueur</h3>
+
+     
+      <p>
+        <b> Calcul d'espérance de Hit </b>
+     </p>
+
+     <p>
+      Lorsque le joueur Hit, ce dernier ne peut que décider de continuer de Hit ou de Stand. Puisqu'il ne lui est pas possible d'abandonner ou de doubler, on a alors que 
+      \( \mathbb{E}[\mathcal{H}_{n \wedge \kappa} \mid \mathbf{R}_{n \wedge \kappa}] \) est uniquement dépendant de \( \mathbb{E}[G_{n \wedge \kappa} \mid \mathbf{R}_{n \wedge \kappa}] \) 
+      pour tout \(n \geq 0 \).
+     </p>
+
+     <p>
+      On peut alors pour déterminer \( \mathbb{E}[\mathcal{H}_{n \wedge \kappa} \mid \mathbf{R}_{n \wedge \kappa}] \) en construisant un PDM à seulement deux actions : HIT ou STAND. 
+     </p>
+
+     <p>
+        Pour \(N = \infty\), supposons \(\mathbf{S}\) et \(\mathbf{D_1}\) fixés.  Dans ce cas, l'espace d'état \(S_1\) du joueur est facilement dénombrable. 
+        Tout comme avec le croupier, on peut déduire une bijection à partir de \( (\mathbf{H'}_n)_{n \geq 0} \) 
+        representant \( (S_t)_{t \geq 0} \). Le PDM du joueur doit egalement être absorbant avec un état final siginifiant la fin de partie. On a alors : 
+         \[
+        S_1 = \{0, 2, 3, \dots, 30\} \cup \{A, AA, A2, \dots, A10\} \cup \{10+\} \cup \{ \text{END}\}  
+      \] 
+     </p>
+
+
+     <p>
+      En fixant uniquement le sabot \(\mathbf{S}\), on a que l'espace d'états réel du système est \(S = S_1 \times \{A, 2, 3, \dots, 10\} \) issu du processus \( ( \mathbf{R}'_n)_{n \geq 0} \)
+      avec \(  \mathbf{R}'_n =  (\mathbf{S}, \mathbf{H}'_n,\mathbf{D}'_1) \) à valeur dans \(K'\) (qui est donc en bijection avec \(S\)) et avec comme propriété facilement vérifiable  pour tout \( n \geq 0 \) : 
+
+      \[
+          \mathbb{E}[G_n \mid \sigma(\mathbf{R}'_n)] =  \mathbb{E}[G_n \mid \sigma(\mathbf{R}_{n \wedge \kappa })] 
+      \]
+     </p>
+
+     <p>
+      Qui a pour conséquence \( \, \mathbb{E}[ \mathcal{H}_n \mid \sigma(\mathbf{R}'_n)] =  \mathbb{E}[\mathcal{H}_n \mid \sigma(\mathbf{R}_{n \wedge \kappa })] \, \) puis 
+      \( \, \mathbb{E}[ \mathcal{L}_n \mid \sigma(\mathbf{R}'_n)] =  \mathbb{E}[\mathcal{L}_n \mid \sigma(\mathbf{R}_{n \wedge \kappa })] \, \) pour tout \( n \geq 0 \).
+     </p>
+
+     <p>
+      Pour les actions possibles \(A\), le joueur a la possibilité de HIT tant que son score est inférieur à \(21\) et peut STAND à tout moment.
+      Si le score atteint ou dépasse \(21\), le joueur est obligé de STAND et de conserver son score actuel.
+      L'action de STAND entraine nécessairement l'état absorbant du système END avec \( \, \mathbb{P}(s' = \text{END} \mid a = \text{STAND})  = 1 \, \) 
+     </p>
+
+     <p>
+      On omet pour le moment l'action de SPLIT, car on montrera par la suite, que l'espérance de cette action a une forme close à partir de l'esperance de HIT, simplifiant ainsi le système à seulement deux actions. 
+     </p>
+
+  
+
+     <p>
+       Pour un \(n \geq 0 \) quelconque,  soit \(  \mathbf{R}'_n =  (\mathbf{S}, \mathbf{H}'_n,\mathbf{D}'_1) = s \, \). 
+       Il est alors suffisant d'utiliser la règle suivante pour les récompenses pour tout \(s \in K'\) et tout \(a \in A \) : 
+         \[
+      r(s,a,s')  =
+      \begin{cases}
+      \mathbb{E}[G_{n} \mid \mathbf{R}'_n = s]
+      & \text{si }  a = \text{STAND} \quad \text{et } s'= \text{END}  \\[6pt]
+      0
+      & \text{sinon }
+      \end{cases}
+      \] 
+     </p>
+
+     <p>
+      Entraînant pour tout \(s \in K'\) et tout \(a \in A \): 
+
+      \[
+        \mathcal{R}^a_s = r(s,a,s'=\text{END}) \, \mathbb{1}_{a = \text{STAND}} 
+      \]
+     </p>
+
+     <p>
+      Les récompenses ne sont obtenues que lorsqu'un état absorbant du système est atteint. On a alors pour tout \(s \in K \), pour toute politique \( \pi \) : 
+
+      \[
+        \begin{aligned}
+        Q^*(s, \, a= \text{STAND}) &= Q_\pi(s, \, a= \text{STAND}) \\[5pt]
+        &= \mathcal{R}^{\text{STAND}}_s  + \gamma \sum_{s' \in S} \mathcal{P}^{\text{STAND}}_{s,s'}  \, V_\pi(s') \\[1pt]
+        &= \mathcal{R}^{\text{STAND}}_s  \\[1pt]
+        &=  \mathbb{E}[G_{n} \mid \mathbf{R}'_n = s]
+        \end{aligned}
+      \]  
+
+      Et de plus, l'espérance de tirage d'une carte, compte tenu de \(s \in K \) vaut :
+      
+      \[
+        Q^*(s, \, a= \text{HIT}) = 0 + \gamma \sum_{s' \in S} \mathcal{P}^{\text{HIT}}_{s,s'}  \, V^*(s') =  \mathbb{E}[\mathcal{H}_n \mid \mathbf{R}'_{n} = s]
+      \] 
+     </p>
+     
+
+     <p>
+      Enfin, notons que  \(\mathcal{P}^a_{ss'}\) = 0 pour tout \(s(0) \neq s'(0)\) et tout \(s(2) \neq s'(2)\) avec \(s(i)\) la composante du vecteur \(\mathbf{R}'_n\) 
+      pour tout \(i \in \{0,1,2\}\). 
+     </p>
+
+     <p>
+      Cela traduit le fait qu'au fur et à mesure que le joueur tire ses cartes, ni le sabot ni la carte de croupier ne change. Cela a pour conséquence que le PDM global peut être décomposer
+      en plusieurs sous PDM indépendants. Puisque \(\mathbf{S}\) est fixé, on a \(10\) sous PDM.
+     </p>
+
+     <p>
+      À titre d’exemple et toujours pour \(N = \infty\), on peut illustrer un morceau du PDM à partir d'un sabot donné, d'un score d'un joueur valant \(16\) sans As soft, face à un croupier ayant une main quelconque et
+      \(\mathbf{S}(c) = \cfrac{1}{13}\) pour tout \(c \in E\) : 
+     </p>
+
+     <figure style="text-align:center;">
+    <img src="{{ url_for('static', filename='images/MDP_sample.png') }}" alt="MDP" width="800">
+      <figcaption>
+        <br>
+         <strong>Figure 2.</strong>  Extrait du PDM à partir de \(\mu_n \circ \mathbf{H}_n = 16\) pour \(\mathbf{S}\) et \(\mathbf{D_1}\) fixés</figcaption>
+      <br>
+    </figure>
+
+    <p>
+
+     Notons que \( \mathbb{E}[G_n \mid \mathbf{R}'_n] = \mathbb{E}[G_n \mid \mathbf{R}'_n , \, \mu \circ \mathbf{H}_n , \, \eta \circ \mathbf{H}_n] \).
+     Egalement, dans le cas où le joueur dépasse \(22\) i.e bust, la récompense est forcément négative : la perte immédiate vaut la mise \(\alpha\).
+    </p>
+    
+    <p>
+      L'application de l'algorithme de l'itération sur la valeur permettant de calculer \( Q^*(s, \, a= \text{HIT})\) et \( Q^*(s, \, a= \text{STAND})\) pour tout \(s \in K'\) donne ainsi : 
+    </p>
+
+    <div class="pseudo-code">
+    \(S \leftarrow \text{supp}{(\mathbf{R}'_n)_{n \geq 0}} \)    #\( s \in S =  (s_0,s_1,s_2)\)
+    <b>for each</b> \(s \in S\)
+        \(V(s) 	\leftarrow 0 \)
+        \(Q(s,\text{stand}) 	\leftarrow 0 \)
+        \( Q(s,\text{hit}) 	\leftarrow 0 \)
+      
+    <b>while</b> \(\delta > \epsilon\)
+        \( \delta 	\leftarrow 0 \)
+        <b>for each</b> \(s \in S\)
+            \( v 	\leftarrow V(s) \)
+             \(\text{Actions} \leftarrow [\text{stand, hit}] \)
+             <b>if</b> \(\mu(s[1]) \geq 21 \)
+                 \(\text{Actions} \leftarrow [\text{stand}] \)
+
+            <b>for each</b> \(a \in \text{Actions}\)
+                <b>if</b> \(a = \text{Stand}\)  
+                    \( Q(s,\text{stand}) \leftarrow \mathcal{R}^a_s\)
+                    \( V(s) \leftarrow Q(s,\text{stand}) \)       
+                <b>else</b> 
+                     <b>for each</b> \(s' \in S\)
+                         \(Q(s,\text{hit}) \leftarrow  Q(s,\text{hit}) + \gamma  \mathcal{P}^a_{s,s'}  \, V(s')\)
+
+                     <b>if</b> \(Q(s,\text{hit}) > V(s) \) 
+                         \( V(s) \leftarrow Q(s,\text{hit}) \) 
+
+            \( \delta 	\leftarrow \max(\delta,  |v - V(s)|) \)
+        </div>
+
+
+    <div class="caption">
+    <strong>Algorithme 2.</strong> Itération sur la valeur (VI)
+    <br>
+    <br>
+    </div>
+
+
+    <p>
+        <b> Calcul d'espérance de Split </b>
+    </p>
+
+    <p>
+      Dans le cas du sabot infini, on peut directement déterminer de manière analytique \( \mathbb{E}[ \mathcal{L}_2 \mid \mathbf{R}_2] \) à partir des espérances de Tirage, Stand et abandonner.
+      L'esperance de split est également fonction du nombre de splits maximum autorisé dans la partie. On notera alors \( \mathbb{E}[ \mathcal{L}_2 \mid \mathbf{R}_2, \, k]  \) l'espérance de SPLIT pour \(k \in \mathbb{N}^*\)
+      splits autorisés.
+    </p>
+
+    <p>
+      Soit \( M_p \subset \mathbb{N}^E \) un sous ensemble des mains possibles tels que : 
+      \[
+       M_p= \left\{ v \in \mathbb{N}^{E}, \;\middle|\; \sum_{i=1}^{10} v_i = p \;\text{ et }\; \max_{i} \, v_i = p, \, \, p \in \mathbb{N}\right\}
+      \]
+      Si une main est paire alors \( \mathbf{H}_2 \in M_2 \), si une main ne possède qu'une carte, alors \( \mathbf{H}_1 \in M_1 \).
+    </p>
+
+    <p>
+      Soit la fonction \(\zeta : M_2 \rightarrow M_1 \) transformant une main paire en une main splitée avec une des deux cartes avec 
+      \[
+        \zeta(i)(c) = \mathbb{1}_{ s(c)=2} \quad \forall c \in E, \, i \in M_2
+      \] 
+    </p> 
+
+    <p>
+      Puisque le split ne se fait que sur une paire, pour \(k\) fixé,  \( \, \mathbb{E}[ \mathcal{L}_2 \mid \mathbf{R}_2, \, k] \, \) se calcul conditionnellement sur \(10 \times 10\) valeurs distinctes de \(\mathbf{R}_2\). 
+    </p>
+
+    <p>
+      Supposons que le joueur split et qu'un split maximum soit autorisé i.e \(k=1\). 
+      Le joueur doit choisir pour chacune des deux mains l'action (parmi Stand, Tirer ou Doubler) qui maximise son esperance de gain. Puisque \(N = \infty\), les lois de tirages sont les même pour les deux mains.  
+    </p>
+
+    <p>
+      On a alors que \( \mathbb{E}[ \mathcal{L}_2 \mid \mathbf{R}_2 = s, \, k=1] \) vaut pour tout \( s = (s_1,s_2,s_3) \in K\) tels que \( s_2 \in M_2\) et \(k=1\),
+      deux fois l'espérance du choix optimal post-split en prenant la meilleur décision pour chaque deuxième carte tirée \(s'\) : 
+      \[
+        \begin{aligned}
+          &\mathbb{E}[ \mathcal{L}_2 \mid \mathbf{R}_2 = (s_1, s_2, s_3), \, k=1] \\
+          &= 2 \sum_{s' \in K' }
+          \mathbb{P}(\mathbf{R'}_2 = s' \mid \mathbf{R}_1 = (s_1, \zeta(s_2), s_3))
+          \max \Big(
+            \mathbb{E}[ G_2 \mid \mathbf{R}'_2=s'], \,
+            \mathbb{E}[ \mathcal{H}_2 \mid \mathbf{R}'_2=s'], \,
+            \mathbb{E}[ \mathcal{D}_2 \mid \mathbf{R}'_2=s']
+          \Big)
+        \end{aligned}
+      \]
+    </p>
+
+    <p>
+       On peut généraliser cela au cas ou \(k \in \mathbb{N}^*\) splits sont autorisés. On a directement par \(N = \infty\) que tout splits issues de
+      \( s = (s_1,s_2,s_3) \in K \) avec \(s_2 \in M_2 \) engendre 
+       des mains de même espérance de gains  \( \mathbb{E}[ \mathcal{L}_2 \mid \mathbf{R}_2 = s, \, k=1]\). Donc toutes nouvelles mains splitées partagent la même action optimale. Si cette espérance est positive, le joueur
+       à tout intérêt à spliter ses mains jusqu’à atteindre \(k\). A l'inverse, si celle-ci est négative, le choix optimal revient à ne spliter qu'une fois. 
+    </p>
+
+    <p>
+      Soit \(i \in M_2 \). On a que la probabilité d'obtenir une nouvelle paire vaut : 
+      \[
+          \mathbb{P}(\mathbf{H}_2 \in M_2 \mid  \mathbf{H}_1 = \zeta(i) ) = \sum_{c \in E} \mathbf{S}(c) \mathbb{1}_{\zeta(i)(c)=1}
+      \]
+
+      Par exemple pour un sabot classique \( \mathbf{S}\), tel que \(\mathbf{S}(c) = \cfrac{1}{13}\) pour tout \(c \in E\), on a pour tout \(i \in M_2 \, \) que  
+      \( \, \mathbb{P}(\mathbf{H}_2 \in M_2 \mid  \mathbf{H}_1 = \zeta(i) ) = \cfrac{1}{13}\).
+
+    </p>
+
+    <p>
+      Pour \( s = (s_1,s_2,s_3) \in K \) avec \(s_2 \in M_2 \), on note par la suite :
+      \(
+        \mathbb{E}^1_s[ \mathcal{L}_2] = \mathbb{E}[ \mathcal{L}_2 \mid \mathbf{R}_2 = s, \, k=1] \, 
+      \)
+
+      et \( \, p_{s} = \mathbb{P}(\mathbf{H}_2 \in M_2 \mid  \mathbf{H}_1 = \zeta(s_2)) \)
+    </p>
+
+    <p>
+      On peut montrer par récurrence pour tout \(j \in \mathbb{N}^*\):
+      
+       \begin{align*}
+        \mathbb{E}[ \mathcal{L}_2 \mid \mathbf{R}_2 = (s_1,s_2,s_3), \, k=j]
+            &= \mathbb{E}^1_s[ \mathcal{L}_2] + \sum_{i=1}^{j-1} \Big[ p_s \Big]^i \, 
+            \mathbb{E}^1_s[ \mathcal{L}_2] \, \, \mathbb{1}_{ \{ \mathbb{E}^1_s[ \mathcal{L}_2]] > 0  \}} \\[3pt]
+            &= \mathbb{E}^1_s[ \mathcal{L}_2] + \mathbb{E}^1_s[ \mathcal{L}_2]  \, \, \mathbb{1}_{\{\mathbb{E}^1_s[ \mathcal{L}_2] >0\}}  \sum_{i=1}^{j-1} 
+              \Big[ p_s \Big]^i \\[3pt]
+            &= \mathbb{E}^1_s[ \mathcal{L}_2] \left[1+\mathbb{1}_{\{\mathbb{E}^1_s[ \mathcal{L}_2]>0\}}
+            \frac{p_s-\big(p_s \big)^{j}}
+            {1-p_s}\right]
+              \\[5pt]
+            &= \max\!\Big(\mathbb{E}^1_s[ \mathcal{L}_2], \, \, \mathbb{E}^1_s[\mathcal{L}_2] \, \cfrac{1 - \big(p_s \big)^{j}}{1-p_s} \Big).
+       \end{align*}
+
+    </p>
+
+    <p>
+      On a de plus si on suppose un nombre infini de splits possibles que : 
+
+      \begin{align*}
+      \lim_{j\to +\infty} \mathbb{E}[ \mathcal{L}_2 \mid \mathbf{R}_2 = (s_1,s_2,s_3), \, k=j]
+            &= \mathbb{E}^1_s[ \mathcal{L}_2]\left[1+\mathbb{1}_{\{\mathbb{E}^1_s[ \mathcal{L}_2]>0\}}
+            \frac{p_s}{1-p_s}\right] \\[3pt]
+            &= \max\!\Big(\mathbb{E}^1_s[ \mathcal{L}_2], \, \, \cfrac{\mathbb{E}^1_s[ \mathcal{L}_2]}{1-p_s} \Big).
+
+      \end{align*}
+    </p>
+
+
+    <p>
+     On intégrerea trois règles assez communes pour le split qui modifient le calcul de son espérance : 
+    </p>
+
+     <ul>
+      <li>
+        Le joueur ne peut obtenir de Blackjack à la suite d'un split, i.e une main \(A10\) est équivalent à \(21\).
+        En revanche le croupier peut toujours en obtenir et si cela arrive, ce dernier l'emporte toujours sur le joueur. <br>   
+        L'évenement \(W_n\) de victoire classique reste inchangé. En revanche les évenements d'égalité \(E_n\) et de défaite \(L_n\) sont modifiés et vaut pour 
+        \(L_n : \)
+
+        \[
+            L_{n} = \Big\{ \mathbf{D}_\tau = e_{(A,10)} \, \cup \,  (\mu \circ \mathbf{H}_{n}) > 21 \ \cup \ \Big(  (\mu \circ \mathbf{H}_{n}) < (\mu \circ \mathbf{D}_{\tau})
+            \ \cap \ (\mu \circ \mathbf{D}_{\tau}) \leq 21\
+            \Big) \Big\}
+        \]
+
+        Puis, la variable aléatoire de gain \(G_n\) vaut : 
+
+        \[
+          G_n = \alpha \, \mathbb{1}_{W_n} - \alpha \, \mathbb{1}_{L_n}
+        \]
+
+      </li>
+      <li>
+        Le joueur ne peut split qu'une fois par partie une paire d'As, i.e \(k=1\) nécessairement pour \( \mathbf{H}_2 = e_{A,A} \)
+      </li>
+      <li>
+        Si le split se fait sur une paire d'AS, un seul tirage est autorisé pour les deux nouvelles mains, ie pour \( s_2 = e_{A,A} \) : 
+         \[
+        \begin{aligned}
+          &\mathbb{E}[ \mathcal{L}_2 \mid \mathbf{R}_2 = (s_1, s_2, s_3), \, k=1] \\
+          &= 2 \sum_{s' \in K' }
+          \mathbb{P}(\mathbf{R'}_2 = s' \mid \mathbf{R}_1 = (s_1, \zeta(s_2), s_3))
+          \max \Big(
+            \mathbb{E}[ G_2 \mid \mathbf{R}'_2=s'], \,
+            \frac{1}{2} \, \mathbb{E}[ \mathcal{D}_2 \mid \mathbf{R}'_2=s'], \,
+            \mathbb{E}[ \mathcal{D}_2 \mid \mathbf{R}'_2=s']
+          \Big)
+        \end{aligned}
+      \]
+      </li>
+    </ul>
+
+
+      <p>
+        <b> Tableau des resultats des choix optimaux </b>
+    </p>
+
+
+    <p>
+      On a alors déterminé toutes les quantités nécessaire au choix optimal à effectuer pour tout état \(s \in  K'\) issue d'une main non paire. 
+      Ainsi que pour tout état issue d'une paire : \(s = (s_1,s_2,s_3) \in K \) avec \(s_2 \in M_2 \). 
+    </p>
+
+    <p>
+      Pour \(N = \infty\), on utilise un sabot \(\mathbf{S}\) classique tel que   \(\mathbf{S}(c) = \cfrac{1}{13}\) pour tout \(c \in E\), ainsi qu'un nombre de splits \(k = \infty\).
+    </p>
+
+    <p>
+      En calculant chaque espérance, on peut dresser un tableau de choix optimal pour tout les états du jeux tels que le score soit compris entre \(4\) et \(20\) avec les notations suivantes : 
+    </p>
+
+    <ul>
+        <li>
+          S : Stand
+        </li>
+        <li>
+          H : Tirer 
+        </li>
+        <li>
+          Dh : Doubler si possible sinon Tirer
+        </li>
+        <li>
+          Ds : Doubler si possible sinon Stand
+        </li>
+        <li>
+          Ah : Abandonner si possible sinon Tirer
+        </li>
+        <li>
+          As : Abandonner si possible sinon Stand
+        </li>
+        <li>
+          SP : Split
+        </li>
+
+
+        
+      </ul>
+
+    
+    <div class="tableaux">
+      <iframe class="df1" src="{{ url_for('static', filename='html/choix_hard.html') }}"></iframe>
+      <iframe class="df2" src="{{ url_for('static', filename='html/choix_soft.html') }}"></iframe>
+      <iframe class="df3" src="{{ url_for('static', filename='html/choix_pair.html') }}"></iframe>
+    </div>
+
+    <div class="caption">
+  <strong>Tableau 2.</strong> Choix optimaux pour chaque \(s \in K'\) et chaque état de mains paire
+  <br>
+  <br>
+  </div>
+
+
+  
+  <h3 id="3.3">III.3 PDM pour le cas \(N = \infty \)</h3>
+
+    <p>
+        <b> EN COURS </b>
+    </p>
+
+    <p>
+      Pour un sabot fini, on peut construire de la même manière que <b>III.2</b> un PDM d'actions HIT, STAND, lui même composé de \(10\) sous PDM indépendants issue des différentes cartes du croupier.
+    </p>
+
+
+  <h2 id="4">IV. Simulation de Monte-Carlo, Ruine, Espérance de gain à long terme</h2>
+
+  <h3 id="4.1">IV.1 Approximation des moments d'ordre 1 et 2, convergence et distribution</h3>
+  
+
+  <p>
+    Une question que le joueur peut légitimement se poser est : compte tenu d'une politique donnée, quelle est l'espérance de gain moyen par partie si le joueur jouait indéfiniment ?
+    Il est possible de répondre à cette question sans calcul analytique en approximant de manière numérique via une méthode de Monte-Carlo.
+    On considère toujours un sabot infini avec \(N = +\infty\).  
+    
+  </p>
+
+  <p>
+    La loi forte des grands nombre nous dit que pour une suite \((\mathcal{Y}^\pi_k)_{k >0}\) représentant le gain par partie suivant une politique \(\pi \),  de carré intégrable et i.i.d, on a pour tout \(k >0 \) : <br> 
+    On note \(w = \mathbb{E}(\mathcal{Y}^\pi_k)\quad \) et soit  \(\quad M_N = \displaystyle \frac{1}{N} \sum_{k=1}^N \mathcal{Y}^\pi_k \quad \), alors \(\quad M_N \xrightarrow{N \to +\infty} w \quad \)  p.s et dans \(L^2\).
+  </p>
+
+  <p>
+      Lorsque le nombre de splits \(m \in \mathbb{N}^* \cup \{+\infty\}\) est fini on a que pour tout \(k \in N^* \), tout mise \(\alpha > 0\) \(|\mathcal{Y}^\pi_k| < \infty\) ie 
+      \(\mathcal{Y}^\pi_k \) est dans \(L^\infty\).
+
+  </p>
+
+  <p>
+         Si \(m = \infty\), on peut montrer que \(\mathcal{Y}^\pi_k\)  est dans \(L^2\) pour tout \(k \in N^* \), tout mise \(\alpha > 0\) : 
+      \[
+          \mathbb{E}[(\mathcal{Y}^\pi_k)^2] \leq (2\alpha)^2 + \frac{1}{13}(2\alpha)^2 + \frac{1}{13^2}(2\alpha)^2 + \dots \leq  \frac{(2\alpha)^2 . 13}{12} 
+      \]
+  </p>
+
+  <p>On insiste sur le fait que \(\mathcal{Y}^\pi_k\) est bien le gain pour la \(k\)-ième partie (et non pas l'index de l'état \(n\) de la main comme pour \(Y_n\)).</p>
+
+  <p>
+    On peut de plus visualiser les trajectoires et calculer un intervalle de confiance empirique. On obtient les résultats suivant; pour une politique optimale et une politique aléatoire (Stand ou Tirer) : 
+  </p>
+
+
+  <figure style="text-align:center; margin-left:0;">
+    <img src="{{ url_for('static', filename='images/monte_carlo_pi.png') }}" alt="MDP" width="1000">
+      <figcaption> <strong>Figure 3.</strong> Simulation de trajectoires pour une politique optimale et aléatoire</figcaption>
+      <br>
+  </figure>
+
+    <p>
+    On considère ici un solde de \(2000\), une mise \(\alpha = 10\) constante, et un nombre de splits illimité. Il est intéressant de noter que la politique optimale engendre un drift quasi-nulle, et donc un jeu presque équilibrée. Une politique aléatoire
+    entraine une perte moyenne de 38.38% de la mise à chaque partie.   
+    </p>
+
+    <p>
+        De même, en appliquant la loi forte des grands nombres à la suite \((\mathcal{Y}^\pi_k - w)^2\), on obtient la convergence de la variance empirique :  
+        \(\displaystyle S_N^2 = \frac{1}{N} \sum_{k=1}^N (\mathcal{Y}^\pi_k - M_N)^2 \xrightarrow{N \to +\infty} \mathrm{Var}(\mathcal{Y}^\pi_k) \quad \) p.s.
+    </p>
+
+    <p>
+      Pour la politique optimale, on obtient une variance empirique d'environ 110.0% la mise \(\alpha\), et 91.7% pour la politique aléatoire.
+    </p>
+    
+
+    <p>
+      Egalement, d’après le théorème central limite, si l’on centre et réduit la somme des gains,  
+      \(\displaystyle Z_N = \frac{\sqrt{N}(M_N - w)}{\sigma}\),  
+      alors on a la convergence en loi suivante :  
+      \(\displaystyle Z_N \xrightarrow{d} \mathcal{N}(0,1)\).
+    </p>
+
+    <p>
+      On peut aussi observer la vitesse de convergence sur les moments calculés. Il faut pour cela simuler un grand nombre de parties pour voir l'estimateur converger de manière acceptable : 
+    </p>
+
+    <figure style="text-align:center; margin-left:0;">
+    <img src="{{ url_for('static', filename='images/convergence.png') }}" alt="MDP" width="700">
+      <figcaption> <strong>Figure 4.</strong>  Convergence de l'espérance de gain pour la politique optimale</figcaption>
+      <br>
+    </figure>
+
+    <p>
+      Enfin il peut être intéressant d'observer directement la distribution des gains par partie compte tenu d'une politique. Cette distribution est évidemment discrète pour \(\alpha\) fixé mais peut être fini ou non 
+      selon les règles concernant le nombre maximum de splits.
+    </p>
+
+    <p>
+      En considérant \(m  \in \mathbb{N}^*\) splits autorisés, le support \(L\) de la v.a de gain par partie \(\mathcal{Y}^\pi_k\) est pour tout \(k>0\)  : 
+      \[
+      L = \alpha \cdot \{-2, -1, -\frac{1}{2}, 0, 1, \frac{3}{2}, 2\} \cup \left\{ \alpha\sum_{i=0}^m \delta_i \;\middle|\; \delta_i \in \{-2, -1, 1, 2\} \right\}
+      \]
+    </p>
+
+    <p>
+      Si de plus \(m\) est fini, on a :  
+      \[ \text{inf(L)} = \text{min(L)} = -2\alpha m \qquad  \text{et} \qquad \text{sup(L)} = -\text{inf(L)} \]
+    </p>
+
+    <p>
+      Il n'est pas si évident d'obtenir analytiquement la loi de \(\mathcal{Y}^\pi_k\). Pour se faire, il faut calculer pour tout \(x \in L\), la probabilité \(\mathbb{P}(\mathcal{Y}^\pi_k = x)\). 
+      On a via la formule des probabilités totales tel que \(\mathbb{P}(\mathbf{H'}_2 = i, \ \mathbf{D'}_1 = j) \neq 0 \) : 
+
+      \begin{align}
+      \mathbb{P}(\mathcal{Y}^\pi_k = x)
+      &= \sum_{i\in K}\sum_{j\in K}
+      \mathbb{P}\big(\mathcal{Y}^\pi_k = x \mid \mathbf{H}'_2 = i,\ \mathbf{D}'_1 = j\big)\,
+      \mathbb{P}\big(\mathbf{H}'_2 = i,\ \mathbf{D}'_1 = j\big)\\[6pt]
+      &= \sum_{i\in K}\sum_{j\in K}
+      \mathbb{P}\big(\mathcal{Y}^\pi_k = x \, \cap \,  \mathbf{H}'_2 = i \, \cap \,  \mathbf{D}'_1 = j\big).
+      \end{align}
+    </p>
+
+    <p>
+      On peut alors pour chaque \(j \in K\) constuire la matrice de transition du joueur \(\mathcal{P^{j,\pi}}\), les états absorbants étant le fait de Stand, ou de dépasser 21.
+      Puis, comme pour la partie <b> II.</b>, écrire cette dernière sous forme canonique, calculer la matrice fondamentale \(N^{j,\pi}\) pour enfin obtenir la matrice : 
+      
+      \[
+        B^{j,\pi} = N^{j,\pi} R^{j,\pi}
+      \]
+
+      On notera alors le temps d'arrêt du joueur associé aux états absorbants : 
+
+      \[
+      \tau^{j,\pi} := \inf \{ n > 0 :  \mu_n \circ \mathbf{H}_n \geq 21 \, \cup \, \pi \circ \mathbf{H}_n = \text{Stand}  \}
+      \]
+
+      Ou chaque élément \(B^{j,\pi}_{i,q} = \mathbb{P}^{2,i}(\mathbf{H'}_{\tau^{j,\pi}}=q)  = \mathbb{P}(\mathbf{H'}_{\tau^{j,\pi}}=q \mid \mathbf{H'}_2=i) \)
+
+    </p>
+    
+    <p>
+      Notons que contrairement la matrice de transition \(P\) du croupier construit dans la partie <b>II</b>, il est nécessaire de pouvoir distinguer le cas d'une main paire ou non (pour le choix de split). 
+      Ces éléments doivent donc en plus figurer dans la matrice  \(\mathcal{P^{j,\pi}}\).
+    </p>
+
+    <p> Plutôt que de passer par le calcul analytique, nous pouvons encore une fois approximer numériquement via Monte-Carlo. 
+      Cela est vrai car \(\displaystyle \mathbb{P}(A) = \mathbb{E}[\mathbb{1}_A]\)  pour tout évenement \(A\) dans la tribu.
+      On obtient alors les distributions suivantes pour \(\alpha = 10\), et pour respectivement une politique optimale avec trois splits maximum, et une politique aléatoire entre Tirer ou Stand: </p>
+
+
+    <figure style="text-align:center; margin-left:0;">
+    <img src="{{ url_for('static', filename='images/distribution.png') }}" alt="MDP" width="1000">
+      <figcaption> <strong>Figure 5.</strong> Distribution empirique des gains pour la politique optimale et aléatoire</figcaption>
+      <br>
+    </figure>
+
+
+    
+     <h3 id="4.2">IV.2 Ruine et réussite du joueur</h3>
+
+     <p>
+      Il peut également être pertinent pour le joueur de s’interroger sur ses probabilités de ruine et de réussite.
+      Etant donnée une politique \(\pi\), une mise constante \(\alpha \in \mathbb{R}_+\), un capital de départ \(a \in \mathbb{R}_+^*\), et un objectif de gain \(b \in \mathbb{R}_+^*\). 
+      Quelle est la probabilité de ruine ou de réussite du joueur ?
+      On considère la suite pour tout \(n \geq 0\), en posant \(\mathcal{Y}^\pi_0 = 0\) : 
+      
+      \[
+         S^\pi_n = \mathcal{Y}^\pi_0 + \dots +  \mathcal{Y}^\pi_n
+      \]
+
+      Puisque \(\mathbb{E}[\mathcal{Y}^\pi_1] = \dots = \mathbb{E}[\mathcal{Y}^\pi_n] = w \ \) pour tout \(n >0\), on peut facilement vérifier que la suite \((S_n - n \, w)_{n \geq 0} \ \) est une martingale intégrable.
+      Notons que si \(w = 0\), \((S^\pi_n)_{n \geq 0}\) est déjà une martingale intégrable.
+     </p>
+
+     <p>
+      On s'intéresse ensuite au temps d'arrêt :  
+      \(T = \inf\{  n > 0, \ S^\pi_n \leq -a \ \ \text{ou} \ \ S^\pi_n \geq b \}\). Si \(S^\pi_n \leq -a\), c'est la ruine, sinon c'est la réussite. On cherche alors a calculer la probabilité 
+      \(\mathbb{P}(S^\pi_T \leq -a) = 1 - \mathbb{P}(S^\pi_T \geq b)\), ainsi que le temps  moyen de réussite ou de ruine \(\mathbb{E}[T]\).
+     </p>
+
+     <p> Puisque \(T\) est un temps d'arrêt, on a que \((S^\pi_{n \wedge  T} - (n \wedge  T) \, w)_{n \geq  0} \ \) est également une martingale, avec \(a \wedge b = \min(a,b) \). 
+      On a alors pour tout \(n \geq 0\) :  
+
+      \[
+          \mathbb{E}\Big[S^\pi_{n \wedge  T} - (n \wedge  T) \, w \Big] = \mathbb{E}[S^\pi_0 - 0] = 0
+      \]
+
+      Entrainant donc \(\mathbb{E}[S^\pi_{n \wedge  T}] = \mathbb{E}[(n \wedge  T)] \, w  \).
+      
+      
+     </p>
+
+     <p>
+      Notons que  \( | \mathbb{E}[\mathcal{Y}^\pi_T] | \leq \mathbb{E}[|\mathcal{Y}^\pi_T|] \leq \frac{2 \alpha.13}{12}  \) . Par construction on a aussi que \(  -a \leq S^\pi_{n \wedge (T -1)} \leq b \ \)  
+      pour tout \(n \geq 0\), et donc 
+      \[ - a + \mathcal{Y}^\pi_T \, \leq \,  S^\pi_{n \wedge  (T-1)} + \mathcal{Y}^\pi_T  \, = \, S^\pi_{n \wedge  T} \, \leq \, b + \mathcal{Y}^\pi_T  \]
+
+      Et donc en passant à l'espérance : 
+
+      \[
+      \begin{aligned}
+      -a - \frac{2\alpha \cdot 13}{12}
+      &\;\leq\;
+      -a + \mathbb{E}[\mathcal{Y}^\pi_T] \\[6pt]
+      &\;\leq\;
+      \mathbb{E}[S^\pi_{n \wedge T}]
+      = \mathbb{E}[\,n \wedge T\,]\, w \\[6pt]
+      &\;\leq\;
+      b + \mathbb{E}[\mathcal{Y}^\pi_T] \\[6pt]
+      &\;\leq\;
+      b + \frac{2\alpha \cdot 13}{12}.
+      \end{aligned}
+      \tag{5}
+      \]
+
+    </p>
+
+    <p>
+      On remarque aussi que la suite \((n \wedge  T)_{n \geq 0}\) est positive, croissante, intégrable et converge vers \(T\) donc 
+      \( \mathbb{E}[n \wedge  T] \xrightarrow{n \to +\infty} \mathbb{E}[T] \) par théorème de Beppo-Lévi. En passant \((5)\) à la limite, on a que \(T \in L^1\) et donc \(\mathbb{P}(T \leq \infty) = 1\)
+    </p>
+
+    <p>
+      D'autre part, on a aussi que \( S^\pi_{n \wedge  T} \xrightarrow{n \to +\infty} S^\pi_T  \), et \((5)\) nous permet de conclure par théorème de convergence dominée que 
+      \( \mathbb{E}[S^\pi_{n \wedge  T}] \xrightarrow{n \to +\infty} \mathbb{E}[S^\pi_T] \).
+    </p>
+
+    <p>
+      On a finalement que 
+      \[
+        \mathbb{E}[S^\pi_{T}] = \mathbb{E}[(T)] \, w
+        \tag{6}
+      \]
+    </p>
+
+    <p>
+      Le théorème des espérances totales nous donne aussi  : 
+      \[
+        \mathbb{E}[S^\pi_{T}] = \mathbb{P}(S^\pi_T \leq -a) \mathbb{E}[S^\pi_{T} \mid S^\pi_T \leq -a ] + \mathbb{P}(S^\pi_T \geq b) \mathbb{E}[S^\pi_{T} \mid S^\pi_T \geq b ]
+      \] 
+    </p>
+
+    <p>
+      Il est possible de simplifier cette expression sous certaines hypothèses. <br>
+      Tout d'abord en supposant \(\alpha \ll a\) et \(\alpha \ll b\), puis en supposant \(\mathcal{Y}^\pi_T\) borné.
+      On peut montrer que l'on peut alors approximer 
+      \(\mathbb{E}[S^\pi_T \mid S^\pi_T \leq -a] \approx -a\) 
+      et 
+      \(\mathbb{E}[S^\pi_T \mid S^\pi_T \geq b] \approx b\). Cela se démontre par exemple sur l'évenement \(\{S^\pi_T  \leq a\}\) : 
+
+
+      \[
+         - a + \mathcal{Y}^\pi_T \leq   S^\pi_{T} \leq a
+      \]
+
+      Puis en passant à l'espérance conditionnlle : 
+
+       \[
+         - a - \frac{2\alpha \cdot 13}{12} \leq - a + \mathbb{E}[\mathcal{Y}^\pi_T \mid S^\pi_T  \leq a ] \leq   \mathbb{E}[S^\pi_{T} \mid S^\pi_T  \leq a ] \leq - a
+      \]
+
+      La limite des bornes lorsque \( \displaystyle \frac{\alpha}{a}\) tend vers 0 est alors de \(-a\). Un raisonnement analogue se fait avec \(b\).
+      </p>
+
+      <p>
+        Dans ce cas particulier, on a a alors : 
+        \[ \mathbb{E}[S^\pi_{T}] = -a \, \mathbb{P}(S^\pi_T \leq -a) + b \, \mathbb{P}(S^\pi_T \geq b)  = 
+        -a \, \mathbb{P}(S^\pi_T \leq -a) + b \, (1 - \mathbb{P}(S^\pi_T \leq a))
+        \]
+      </p>
+
+      <p>
+        En combinant avec \((6) \), on a : 
+        \[
+          \mathbb{E}[T] = \frac{-a \, \mathbb{P}(S^\pi_T \leq -a) + b \, \mathbb{P}(S^\pi_T \geq b)}{w}
+          \tag{7}
+        \]
+      </p>
+
+      <p> 
+        On suppose par la suite que \(w \neq 0\) . 
+      </p>
+
+      <p>
+         On pose \( \displaystyle M_{\mathcal{Y}^\pi_T}(\theta) = \mathbb{E}[e^{\theta \, \mathcal{Y}^\pi_T}] \ \) la fonction génératrice des moments de la v.a \(\mathcal{Y}^\pi_T\).
+        On peut montrer que si l'on trove un \(\theta\) tel que \(M_{\mathcal{Y}^\pi_T}(\theta) = 1\) alors la suite définie par \(U_n = e^{\theta \, S^\pi_n}\) est une martingale pour tout 
+        \(n \geq 0\ \), et d'ésperance égale à 1
+      </p>
+
+      <p>
+        On pose la filtration naturelle \(\mathcal{A}_n = \sigma(\mathcal{Y}^\pi_1, ..., \mathcal{Y}^\pi_n) = \sigma(S^\pi_1, ..., S^\pi_n) \ \) puis : 
+
+        \[
+        \begin{aligned}
+        \forall n \ge 1, \quad 
+        \mathbb{E}(U_n \mid \mathcal{A}_{n-1})
+        &= \mathbb{E}\!\left( e^{\theta S^\pi_n} \,\middle|\, \mathcal{A}_{n-1} \right) \\[6pt]
+        &= \mathbb{E}\!\left( e^{\theta (S^\pi_{n-1} + \mathcal{Y}^\pi_n)} \,\middle|\, \mathcal{A}_{n-1} \right) \\[6pt]
+        &= e^{\theta S^\pi_{n-1}} \, \mathbb{E}\!\left( e^{\theta \mathcal{Y}^\pi_n} \,\middle|\, \mathcal{A}_{n-1} \right)
+        \quad \text{car } e^{\theta S^\pi_{n-1}} = U_{n-1} \, \text{ est }\, \mathcal{A}_{n-1} \text{- mesurable} \\[6pt]
+        &= e^{\theta S^\pi_{n-1}} \, \mathbb{E}\!\left( e^{\theta \mathcal{Y}^\pi_n} \right)
+        \quad \text{car } \mathcal{Y}^\pi_n \perp\!\!\!\perp \mathcal{A}_{n-1} \\[6pt]
+        &= U_{n-1} \, \mathbb{E}\!\left( e^{\theta \mathcal{Y}^\pi_n} \right) \\[6pt]
+        &= U_{n-1} \quad \text{si } M_{\mathcal{Y}^\pi_T}(\theta) = M_{\mathcal{Y}^\pi_n}(\theta) = \mathbb{E}\!\left( e^{\theta \mathcal{Y}^\pi_n} \right) = 1
+        \end{aligned}
+        \]
+
+        \[
+        \Rightarrow \quad (U_n)_{n \ge 0} \text{ est une martingale.}
+        \]
+      </p>
+
+      <p>
+        Notamment, \(\mathbb{E}[U_{n \wedge T}] =\mathbb{E}[U_0]  \ \) car \(\ U_{n \wedge T}\) est une martingale. 
+        On peut déduire de la même manière qu'auparavant  via le théorème de convergence dominée : 
+        
+        \begin{align*}
+        \mathbb{E}[U_{n \wedge T}] \xrightarrow{n \to +\infty} \mathbb{E}[U_T] &= \mathbb{E}[U_0] = 1 \\
+        &= \mathbb{E}\big[e^{\theta S^\pi_T}\big] \\
+        &= \mathbb{P}(S^\pi_T \le -a)\,\mathbb{E}\big[e^{\theta S^\pi_T} \mid S^\pi_T \le -a\big] 
+        + \mathbb{P}(S^\pi_T \ge b)\,\mathbb{E}\big[e^{\theta S^\pi_T} \mid S^\pi_T \ge b\big].
+        \end{align*}
+
+        Encore une fois, on peut simplifier l'expression sous les hypotèses de \(\alpha \ll a\) et \(\alpha \ll b\), et \(\mathcal{Y}^\pi_T\) borné. On obtient alors : 
+        
+        \[  
+          1 = \mathbb{E}[U_T] = \mathbb{E}\big[e^{\theta S^\pi_T}\big] = \mathbb{P}(S^\pi_T \le -a)\, e^{-\theta a} 
+        + \mathbb{P}(S^\pi_T \ge b)\, e^{\theta b}
+        \]
+
+      </p>
+
+      <p>
+        Puisque \(\mathbb{P}(S^\pi_T \geq b) = 1 - \mathbb{P}(S^\pi_T \geq b) \ \). On obtient alors finalement : 
+
+        \[
+        \mathbb{P}(S^\pi_T \leq -a) = \frac{1 - e^{\theta b}}{e^{-\theta a} - e^{-\theta b}}
+        \]
+
+        Qui nous permet de déduire également \(\mathbb{E}[T]\) via \((7)\). Reste encore à déduire \(\theta\). On sait que \(M_{\mathcal{Y}^\pi_T}(\theta)\) vérifie la relation : 
+
+        \[
+
+        M_{\mathcal{Y}^\pi_T}(\theta) = \mathbb{E}[e^{\theta \, \mathcal{Y}^\pi_T}]  = \mathbb{E}[e^{\theta \, \mathcal{Y}^\pi_1}] = 
+        \sum_{x \in L} \mathbb{P}(\mathcal{Y}^\pi_1 = x)  e^{\theta \, x} = 1
+        
+        \]
+      </p>
+
+      <p> Résoudre \(\sum_{x \in L} \mathbb{P}(\mathcal{Y}^\pi_1 = x)  e^{\theta \, x} = 1\) n'est évidemment pas linéaire, mais peut être approcher par des méthodes numériques. </p>
+
+      <p>
+        Globalement, le calcul des probabilité des ruines et d'espérance de temps d'arrêt n'est pas tâche aisée, et est impossible de manière purement analytique. 
+        D'autant plus que nous avons émis certaines hypothèses supplémentaires, simplifiant le problème, mais ne permet pas de généraliser dans le cas général. 
+        Enfin, l'étape de calcul de \(\theta\) nécessite à elle seule une approche numérique. 
+      </p>
+
+      <p>
+        Il paraît alors plus raisonnable d'aborder le problème via encore une fois une méthode de Monte-Carlo. On peut visualiser selon différentes valeurs de \(\alpha, a, b\) l'impact sur la probabilité de ruine, 
+        en suivant une politique optimale, ou une politique aléatoire :  
+      </p>
+
+      <figure style="text-align:center; margin-left:0;">
+        <img src="{{ url_for('static', filename='images/proba_ruine_double.gif') }}" alt="Animation de la probabilité de ruine" width="900">
+        <figcaption> <strong>Figure 6.</strong> Probabilité de ruines, fonction de \(a,b,\alpha, \pi\)</figcaption>
+        <br>
+      </figure>
+      
+
+      <p>
+        On observe que la politique aléatoire possède une probabilité quasi nulle de réussite pour un \(\alpha\) proche de 0. A l'inverse lorsque \(\alpha\) devient grand par rapport à \(a\) et \(b\), 
+      la probabilité de ruine tends vers la probabilité de défaite d'une partie suivant la politique. 
+      Cela paraît cohérent puisque dans ce cas, le nombre de parties nécessaire pour atteindre le temps d'arrêt tend vers 1. <br>
+      </p>
+
+      <p>
+        On peut également visualiser l'impact des paramètres \((a,b,\alpha)\) sur \(\mathbb{E}[T]\)
+      </p>
+
+      <figure style="text-align:center; margin-left:0;">
+        <img src="{{ url_for('static', filename='images/E_t_2.gif') }}" alt="Animation de la probabilité de ruine" width="1000">
+        <figcaption> <strong>Figure 7.</strong> \(\mathbb{E}[T]\), fonction de \(a,b,\alpha, \pi\)</figcaption>
+        <br>
+      </figure>
+
+      <p>
+        Les différentes valeurs de \(\mathbb{E}[T]\) démontrent l'importance du choix d'une stratégie optimale. Pour le tuplet \((a=19,b=19, \alpha =1 )\) on a un temps d'arrêt moyen égale à environ 300 lorsque
+        \(\pi = \text{optimal}\) contre seulement 50 lorsque \(\pi = \text{aléatoire}\) (avec une probabilité de ruine de quasi 1 !).
+      </p>
+
+      <h3 id="4.3">IV.3 Mise secondaire</h3>
+
+      <p>
+      <b> En cours</b>
+      </p>
+
+      <h3 id="4.4">IV.4 Comptage de cartes</h3>
+
+      <p>
+      <b> En cours</b>
+     </p>
+      
+   
+      
+
+
+
+
+  </div>
+</div>
+
+<script>
+document.querySelectorAll('.toc .collapsible').forEach(item => {
+  const arrow = item.querySelector('.arrow');
+  if (arrow) {
+    arrow.addEventListener('click', e => {
+      e.stopPropagation(); // empêche d'affecter le lien
+      item.classList.toggle('active');
+    });
+  }
+});
+</script>
+
+
+
+{% endblock %}
+

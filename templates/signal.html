@@ -1,0 +1,675 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-container">
+
+
+  <div class="toc">
+    <h4>Sommaire</h4>
+    <ul>
+      <li><a href="#Presentation">Présentation du jeu et de ses règles</a></li>
+
+      <li class="collapsible">
+        <span class="arrow"></span>
+        <a href="#1">I. Définition formelle du processus</a>
+        <ul>
+          <li><a href="#1.1"> I.1 Suite de tirage de cartes dans un sabot fini et infini</a></li>
+          <li><a href="#1.2">I.2 Constitution de la main du joueur et du croupier</a></li>
+          <li><a href="#1.3">I.3 Fin de partie et gains du joueur</a></li>
+          <li><a href="#1.4">I.4 Propriétés de Markov et espérance de gains</a></li>
+        </ul>
+      </li>
+
+      <li class="collapsible">
+        <span class="arrow"></span>
+        <a href="#2">II. Probabilités d'états absorbants du croupier et espérance de Stand</a>
+        <ul>
+          <li><a href="#2.1">II.1 Résolution par calcul matriciel pour le cas \(N = +\infty\)</a></li>
+          <li><a href="#2.2"> II.2 Résolution  par programmation dynamique pour le cas \(N \in \mathbb{N}^*\)</a></li>
+        </ul>
+      </li>
+
+      <li class="collapsible">
+        <span class="arrow"></span>
+        <a href="#3">III. Processus de décision Markovien (PDM), stratégie d'arrêt du joueur, espérance de Hit et Split</a>
+        <ul>
+          <li><a href="#3.1">III.1 Définitions et propriétés</a></li>
+          <li><a href="#3.2">III.2 PDM pour le cas \(N = \infty\)</a></li>
+          <li><a href="#3.3">III.3 PDM pour le cas \(N \in \mathbb{N}^* \)</a></li>
+        </ul>
+      </li>
+
+      <li class="collapsible">
+        <span class="arrow"></span>
+        <a href="#4">IV. Espérance de gain à long terme, Ruine, Mise secondaire et comptage de cartes</a>
+        <ul>
+          <li><a href="#4.1">IV.1 Approximation des moments d'ordre 1 et 2, convergence et distribution</a></li>
+          <li><a href="#4.2">IV.2 Ruine et réussite du joueur</a></li>
+          <li><a href="#4.3">IV.3 Mise secondaire</a></li>
+          <li><a href="#4.4">IV.4 Comptage de cartes</a></li>
+
+        </ul>
+      </li>
+
+
+    </ul>
+  </div>
+
+
+  <div class="text-block">
+    <h1 id="intro">
+    Cheat sheet sur la technologie Art-Fi.
+    <span class="subtitle">Formulation et implémentation</span>
+    </h1>
+
+    <div class="tags">
+      <span>#ChaînesAbsorbantes</span>
+      <span>#MDP</span>
+      <span>#EquationsdeBellman</span>
+      <span>#ProgrammationDynamique</span>
+      <span>#POO</span>
+      <span>#Monte-Carlo</span>
+      <span>#Python</span>
+    </div>
+
+    <p>
+     Cette page a pour but de présenter et rappeler certaines notions essentielles en traitement du signal et electromagnetisme.
+     Le traitement du signal est la discipline qui développe et étudie les techniques de traitement, d'analyse et d'interprétation des signaux.
+
+    </p>
+
+    
+    <h2 id="1">I. Les mesures des technologies sans fils </h2>
+
+    <h3 id="1.1">I.1 Le DAS</h3>
+
+    <p>
+      L'indice de <b>débit d'absorption spécifique</b> ou DAS (en anglais SAR pour <b>Specific Absorption Rate</b>) est
+       une mesure indiquant la puissance d'un flux d'énergie véhiculée par les <b>ondes RF</b> (radiofréquences) absorbée par l'usager d'un appareil
+        radioélectrique (téléphone portable, tablettes, montre connecté, etc.), lorsque cet appareil fonctionne à pleine puissance
+       et dans les pires conditions d'utilisation.
+    </p>
+
+    <p>
+      Dans le Système international, l'unité de mesure du DAS est le <b>watt par kilogramme</b> (W/kg).
+      L'absorption de champs électromagnétiques entraîne une élévation de température des tissus dans le corps.
+    </p>
+
+    <p>
+      Aux États-Unis, la  <b>commission fédérale des communications (FCC)</b>  exige que les téléphones commercialisés aient un niveau de DAS 
+      « tête » et « tronc » inférieur à 1,6 W/kg pour 1 gramme de tissu.
+
+      Au sein de l'Union européenne, la limite de DAS pour la « tête » et le « tronc » est de 2 W/kg, pour les « membres » de 4 W/kg, 
+      pour 10 grammes de tissu durant une exposition de 6 minutes. Pour l'exposition de l'intégralité du corps humain,
+       le seuil du DAS corps entier est de 0,08 W/kg.
+    </p>
+
+    <p>
+      En France l'organisme officiel chargé de ces contrôles est  <b>l'ANFR (Agence Nationale des fréquences)</b>.
+    </p>
+
+    <figure style="text-align:center;">
+    <img src="{{ url_for('static', filename='images/RF/sar.png') }}" alt="sar" width="350">
+      <figcaption> <strong>Figure 1.</strong> Valeurs de SAR et élevation de température sur une tête</figcaption>
+    </figure>
+
+    <h4 id="1.11">Formule du DAS et mesure</h4>
+
+  
+    <p>
+      Le DAS quantifie la 
+      puissance électromagnétique absorbée par unité de masse de tissu biologique et vaut la <strong>dérivée temporelle de l'énergie absorbée par unité de masse</strong>, autrement dit, 
+      la dérivée par rapport au temps de la dérivée de l'énergie \(W\) par rapport à la masse \(m\) :
+      \[ \text{DAS} = \frac{d}{dt}\left( \frac{dW}{dm} \right) = \frac{d}{dt}\left( \frac{dW}{\rho \, dV} \right), \]
+      avec \(\rho\) la masse volumique et tel que \(dm = \rho \, dV\).
+    </p>
+
+    <p>
+      Le DAS se calcule à partir de trois grandeurs physiques équivalentes, mesurées ou simulées dans les tissus :
+    </p>
+
+    <ul>
+      <li>
+        à partir du <strong>champ électrique</strong> \(\vec{E}\) dans les tissus :
+        \[ \text{DAS} = \frac{\sigma \|\vec{E}\|^2}{2 \rho} \]
+      </li>
+      <li>
+        à partir de la <strong>densité de courant</strong> \(\vec{J}\) dans les tissus :
+        \[ \text{DAS} = \frac{\|\vec{J}\|^2}{2\rho \sigma} \]
+      </li>
+      <li>
+        à partir de l'<strong>élévation de température</strong> \(dT/dt\) dans les tissus :
+        \[ \text{DAS} = c_i \, \frac{dT}{dt} \]
+      </li>
+    </ul>
+
+    <p>
+      Avec :
+    </p>
+
+    <ul>
+      <li><strong>\(E\)</strong> : Champ électrique (valeur crête) en V/m</li>
+      <li><strong>\(J\)</strong> : Densité de courant (valeur crête) en A/m², obtenue à partir des champs magnétique et/ou électrique</li>
+      <li><strong>\(\rho\)</strong> : Masse volumique du tissu en kg/m³</li>
+      <li><strong>\(\sigma\)</strong> : Conductivité électrique du tissu en S/m</li>
+      <li><strong>\(c_i\)</strong> : Capacité thermique du tissu en J/(kg·K)</li>
+      <li><strong>\(dT/dt\)</strong> : Dérivée de la température des tissus par rapport au temps, en K/s</li>
+    </ul>
+
+    <p>
+        Le DAS peut ainsi être mesuré selon trois approches :
+    </p>
+
+    <p>
+      Via <strong>thermomètre</strong> pour mesurer l'élévation de température \(dT/dt\) induite par l'absorption 
+      électromagnétique (via \(\text{DAS} = c_i \, dT/dt\)) ; 
+      elle suppose des conditions idéales sans perte de chaleur (diffusion thermique, rayonnement, thermorégulation), et n'est donc 
+      valable que sur des temps de mesure courts.
+    </p>
+
+    <figure style="text-align:center;">
+    <img src="{{ url_for('static', filename='images/RF/thermometer.png') }}" alt="thermometer" width="250">
+      <figcaption> <strong>Figure 2.</strong> Plusieurs thermomètres</figcaption>
+    </figure>
+
+    <p>
+      Via des <strong>sondes de champ E</strong>, des antennes 
+      miniaturisées et peu perturbatrices, contenant plusieurs capteurs orientés selon des axes orthogonaux (par ex. 2 dipôles en 2D) 
+      et l'électronique convertissant le signal RF capté en une tension continue. Cette seconde méthode permet de reconstruire 
+      le vecteur \(\vec{E}\) en un point, puis de calculer le DAS via \(\text{DAS} = \sigma \|\vec{E}\|^2/(2\rho)\). <br>
+    </p>
+
+    <figure style="text-align:center;">
+    <img src="{{ url_for('static', filename='images/RF/champs_E.png') }}" alt="champs_E" width="250">
+      <figcaption> <strong>Figure 3.</strong> Exemple de Champ</figcaption>
+    </figure>
+
+    <p>
+      De façon équivalente, des <strong>sondes de champ H</strong> (boucles magnétiques 
+      plutôt que dipôles électriques) permettent d'accéder à la densité de courant \(\vec{J}\) et de calculer le DAS via 
+      \(\text{DAS} = \|\vec{J}\|^2/(2\rho\sigma)\).
+    </p>
+
+    <p>
+      On privilégie presque systématiquement les <strong>sondes de champ E</strong> aux sondes de champ H. D'une part, 
+      le champ électrique est directement responsable de l'absorption dans les tissus (via \(\vec{J} = \sigma\vec{E}\)), 
+      alors que passer par \(\vec{H}\) nécessite une étape de calcul supplémentaire pour en déduire \(\vec{J}\) via les équations de Maxwell.
+      D'autre part, un dipôle 
+      électrique est plus simple à miniaturiser et perturbe moins le champ mesuré qu'une boucle magnétique.
+    </p>
+
+    <h3 id="1.2">I.1 L'OTA</h3>
+
+
+    <h2 id="2">II. Art-Fi et ses technologies</h2>
+
+      <h3 id="2.1"> II. 1 Les technologies de mesures RF</h3>
+
+    <p>
+      Plusieurs technologies de sondes permettant de réaliser des mesures RF via le champ électrique existent sur le marché.
+      Nous citons les 3 principales existantes,
+      dont la dernière qu'utilise ART-FI dans sa technologie innovante.
+    </p>
+
+        <p>
+            <b> 1. Sonde unique (Single probe) </b>
+        </p>
+
+        <p>Une sonde unique est déplacée mécaniquement point par point, généralement par un bras robotisé.
+          À chaque position, elle mesure l'amplitude du champ électrique i.e le module \( |E| \).
+          Cependant aucune mesure de phase n'est réalisé.
+        </p>
+
+        <p>
+          Parmi les limites de la sonde unique on peut noter : 
+        </p>
+        <ul>
+          <li>Balayage séquentiel, temps de mesure très long, point par point</li>
+          <li>Incompatible avec les signaux modulés rapides (5G NR, beamforming dynamique)</li>
+          <li>Une seule émission à la fois, aucun contrôle qualité du DUT en temps réel</li>
+          <li>impossibilité de reconstruire le SAR mathématiquement sans capture de phase</li>
+        </ul>
+
+        <p><strong>Acteurs historiques</strong> :  SPEAG (DASY), MVG (StarLab), APREL.</p>
+      </section>
+
+        <p>
+          <br>
+            <b>2.  Réseaux de sondes sans phaseur (Probe arrays) </b>
+        </p>
+
+        <p>Des sondes fixes sont réparties en grille et mesurent simultanément plusieurs points de l'espace, supprimant 
+          le déplacement mécanique séquentiel.
+          La mesure est toujours de \( |E| \)  par point. Chaque sonde fonctionne indépendamment, mais aucune relation de
+          phase relative n'est capturée entre les points.
+        </p>
+
+        <p>
+          Le gain est réel : la parallélisation accélère la mesure. Mais le champ complexe reste hors de portée, 
+          la précision se dégrade sur les signaux dynamiques, et la mesure simultanée multi-émissions n'est pas cohérente 
+          au sens vectoriel. C'est une réponse au problème de <strong>vitesse</strong>, pas à celui de la 
+          <strong>précision physique</strong>.
+        </p>
+
+
+        <p>
+          <br>
+            <b> 3.  Réseaux de sondes à phaseur (Phasor probe arrays) </b>
+        </p>
+
+        <p>Chaque sonde mesure le champ sous forme de phaseur complexe
+          \(  \, E = |A| · e^{j\phi} \, \) , référencé à un signal commun distribué à l'ensemble du réseau.</p>
+
+        <p>Le champ complet est mésuré : amplitude et phase, en chaque point et à un instant unique permettant de
+          reconstruire le champ vectoriel dans tout le volume mathématiquement via les équations de Maxwell.
+          Citons les avantages compartivement aux deux autres méthodes : </p>
+
+        <ul>
+          <li>Mesure directe de phase : seule technologie réellement précise, sans reconstruction statistique</li>
+          <li>Émissions simultanées multiples : MIMO, beamforming, agrégation de porteuses</li>
+          <li>Temps réel :  tout est acquis en un seul instant, adapté aux modulations rapides</li>
+          <li>Contrôle qualité du DUT en continu</li>
+          <li>SAR + OTA, potentiel EMC via la même architecture matérielle</li>
+        </ul>
+
+
+
+
+
+    <h3 id="2.2">II. 2 La technologie D-Phase intégré à ART-MAN </h3>
+
+    <p>
+
+      D-PHASE® est la technologie d'ART-Fi dédiée à la mesure des champs électromagnétiques via les réseaux de sondes à phaseur.
+      Cette technologie est intégrée à ART-MAN, le système de mesure des champs électromagnétiques d'ART-Fi.
+      ette technologie innovante utilise un réseau de sondes RF breveté pour mesurer à la fois l'amplitude et la phase des signaux
+      sans fil.
+      Les valeurs mesurées d'amplitude et de phase permettent à ART-MAN d'effectuer différents types de mesures, telles que le DAS et l'OTA.
+    </p>
+
+    <p>
+      L'ART-MAN réalise ses mesures du DAS sur <b>3 phantoms</b> simulant des parties du corps humains : 
+      le tronc \(\, (1) \, \), la tête gauche \(\, (2) \, \) et la tête droite \(\, (3) \, \).
+      On distingue la gauche et la droite car pour un appareil téléphonique, les mesures ne sont pas symétriques.
+      Chaque partie contient un liquide "phantom" simulant propriétés physiques du tissus humain (conductivité, pertmitivité, masse volumique). 
+      Plusieurs mesures du DAS à différent point est alors déterminer pour chaque surface du phantom.
+      Un bras robotisé \(\, (4) \, \) nommé Art-Borg, permet de mouvoir l'appareil à tester : le DUT pour Device Under Test.
+      
+    </p>
+
+    <figure style="text-align:center;">
+        <img src="{{ url_for('static', filename='images/RF/ARTMAN.png') }}" alt="ART-MAN" width="300">
+          <figcaption> <strong>Figure 4.</strong> Empilement de Phasor arrays</figcaption>
+    </figure>
+
+    <p>
+      <br>
+      <b> Matrice de sondes à phasors et aquisition du signal </b>
+    </p>
+
+    <p>
+      ART-MAN utilise un empilement de phasor arrays formant une <b> matrice</b> de sondes uniques.
+      Les sondes uniques possèdent 2 dîpoles orthogonaux \( (x,y) \) mesurant la projection la projection du champ \(E\) sur le plan 2D
+      de la matrice.
+      
+      3 matrices sont intégrés dans l'ART-MAN 
+      (une pour chaque partie du corps) et sont plongés dans le liquide phantom.
+      Chaque phasor probe arrays est appelé "Carte Vertical " (CV). 
+    </p>
+
+    <p>
+      Chaque CV comporte 15 sondes. La matrice du corps est de taille \(26 \times 15\) et les deux matrices de tête de taille
+      \( 19 \times 15 \), pour un total de \(64\) CV.
+    </p>
+
+    <div style="display:flex; justify-content:center; gap:30px; align-items:flex-start;">
+        <figure style="text-align:center;">
+            <img src="{{ url_for('static', filename='images/RF/matrice.png') }}" alt="matrice" width="350">
+            <figcaption><strong>Figure 5.</strong> Empilement de CV formant une matrice</figcaption>
+        </figure>
+
+        <figure style="text-align:center;">
+            <img src="{{ url_for('static', filename='images/RF/DUT.png') }}" alt="DUT" width="400">
+            <figcaption><strong>Figure 6.</strong> CV plongé dans le phantom </figcaption>
+        </figure>
+    </div>
+
+    <p>
+      Pour récuper la valeur de sortie de chaque capteurs/sondes, les matrices sont connectés à 2 multiplexeurs.
+      Un multiplexeur, souvent abrégé MUX, est un appareil qui combine plusieurs signaux d'entrée en un seul signal de sortie.
+      Ce dernier sélectionne parmi les entrées, un seul signal à faire passer vers une sortie unique. 
+      La lecture de chaque sonde se fait alors de manière séquentielle.
+    </p>
+
+    <p>
+      Pour une matrice, la moitié des CV sont connectés à un multiplexeur (les CV paires) et l'autre moitié au second multiplexeur
+      (les CV impaires).  
+      Un multiplexeur possède \( 32 \) entrées. Ce nombre provient de la répartition des CV des 3 matrices entre les deux
+      multiplexeurs : la matrice du tronc, comportant \(26\) CV, se répartit équitablement (\(13\) CV pairs, \(13\) CV impairs) ;
+      les deux matrices de tête, comportant chacune \(19\) CV (nombre impair), se répartissent de façon légèrement
+      déséquilibrée entre pairs et impairs (\(10\) et \(9\) CV respectivement, selon la parité de l'indexation). Un multiplexeur
+      reçoit ainsi la moitié du tronc plus une moitié de chaque tête :
+      \[  
+        \frac{26}{2} +  \left\lfloor \frac{19}{2} \right\rfloor + \left\lceil \frac{19}{2} \right\rceil
+        = 13 + 10 + 9 = 32
+      \]
+      On récapitule le schéma de branchement des matrices avec les 2 multiplexeurs avec le schéma ci-dessous : 
+    </p>
+
+    <figure style="text-align:center;">
+        <img src="{{ url_for('static', filename='images/RF/mux.PNG') }}" alt="mux" width="700">
+          <figcaption> <strong>Figure 7.</strong> Empilement de Phasor arrays</figcaption>
+    </figure>
+
+    <p>
+      On a alors deux sorties simultanées. Il est important de bien comprendre pourquoi pour la mesure de phase, il nous faut 
+      deux signaux synchrones. 
+      On nomme Mux 1 le premier multiplexeur et Mux 2 le second. La mesure complète se fait en deux étapes : 
+    </p>
+
+    <ul>
+          <li>Mux 1 choisis une des sondes (auquelles il est connecté) comme <b>signal de référence</b>. <br>
+            Mux 2 balaye séquentiellement ses sondes pour la mesure.
+          </li>
+          <li>Mux 2 choisis une des sondes  comme <b>signal de référence</b>. <br>
+            Mux 1 balaye séquentiellement ses sondes pour la mesure.
+          </li>
+      
+      </ul>
+
+    <p>
+        Pour une sonde donnée \(n\), le récepteur ne mesure pas la phase \( \phi \) dans l'absolu. Ce dernier fait une démodulation 
+        (un mélance avec un oscillateur local \(LO\)), qui donne : 
+        
+        \[  
+            \phi_n^{\text{mesuré}} = \phi_n^{\text{réel}} - \phi_{LO}(t_n) + \epsilon \, ,
+        \]
+
+        où \( \phi_{LO}(t_n) \) est la phase de l'oscillateur local à l'instant \(t_n\)  où la sonde \(n\) est mesurée, 
+        et \( \epsilon \) le bruit.
+        Or, comme le multiplexeur balaye les sondes séquentiellement, chaque \(t_n\) est différent et 
+        \( \phi_{LO}(t_n) \) n'est pas parfaitement stable dans le temps (dérive thermique, bruit de phase, commutation des switches).
+        Donc \( \phi_{LO}(t_n) \) est une quantité inconnue et variable d'une sonde à l'autre. 
+        
+    </p>
+
+    <p>
+        Si cette fois-ci on  mesure au même instant \(t_n\) une autre sonde \(  \, \phi_{R}^{\text{mesuré}} \, \)
+        servant de <b>référence</b>, on a que la différence vaut : 
+
+        \[
+          Δ  \phi_n = \phi_n^{\text{mesuré}} - \phi_{\text{réf}}^{\text{mesuré}} =
+          \phi_n^{\text{réel}} - \phi_{R}^{\text{réel}} +\epsilon
+        \]
+
+        La différence permet ainsi d'annuler l'offset \( \phi_{LO}(t_n) \) dépendant de l'instrument de mesure.
+    </p>
+
+    <p>
+        Pour choisir la sonde de référence pour les 2 multiplexeurs, on utilise un contrôle automatique de gain (AGC).
+        L'AGC est un mécanisme qui mesure en continu le niveau de puissance du signal RF reçu sur chaque sonde candidate. 
+        Cette puissance est proportionnelle au carré de l'amplitude du champ \( \, |E|^2 \, \).
+        Elle  ajuste ensuite le gain de la chaîne de réception pour maintenir ce niveau dans une plage optimale, sans saturation ni
+        perte dans le bruit. 
+
+    </p>
+
+    <p>
+        Pour la sélection de sonde de référence, l'AGC évalue le SNR obtenu sur
+        les différentes sondes du multiplexeur selon celles disponibles et sélectionne
+        automatiquement celle qui présente le meilleur rapport signal/bruit pour servir de référence de phase pendant
+        tout le passage de balayage du second multiplexeur. 
+        La sonde de référence reste ensuite fixe pendant tout le balayage séquentiel des autres 
+        sondes, afin que tous les déphasages mesurés soient exprimés dans un même référentiel de phase cohérent.
+
+    </p>
+
+
+    <p>
+      <br>
+      <b> Echantillonage et conversion du signal </b>
+    </p>
+
+
+    <p>
+        Une fois la sonde \(n\) sélectionnée (référence ou mesure), le signal RF qu'elle capte peut être représenté 
+        sous forme de <b>phaseur complexe</b>
+        (amplitude et phase réunies en un seul nombre complexe) que le système RF phasor array cherche à mesurer. Pour 
+        une fréquence donnée, on a : 
+
+        \[
+          \tilde{v}_n = A_n \, e^{j\phi_n^{\text{réel}}}
+        \]
+
+        Ce signal est porté à une fréquence \(f_0 \in [600, 6000] MHz \) élevée, ce qui rendrait sa 
+        numérisation directe très coûteuse : le théorème de Nyquist imposerait une fréquence d'échantillonnage 
+        \(f_s > 2f_0\), donc un <b>convertisseur analogique-numérique</b> (<i>ADC</i>, ou <i>A/D</i>) extrêmement 
+        rapide, et par conséquent moins résolu en bits (donc plus bruité).
+    </p>
+
+    <p>
+        On fait donc passer le signal par un <b>downconverter</b>, commun aux deux voies du mux, avant l'ADC. 
+        Ce bloc mélange le signal reçu avec le phaseur de l'oscillateur local \( \tilde{v}_{LO}(t_n) = e^{j\phi_{LO}(t_n)} \), 
+        la phase de ce dernier étant prise à l'instant \(t_n\) où la sonde \(n\) est mesurée :
+
+      \[
+        \tilde{v}_n \cdot  \overline{\tilde{v}_{LO}(t_n)} = A_n \, e^{j\left(\phi_n^{\text{réel}} - \phi_{LO}(t_n)\right)}
+      \]
+
+      Après filtrage passe-bas (\( [20, 60] MHz \)) et conversion vers une fréquence intermédiaire \(f_{IF}\) exploitable par l'ADC, la phase 
+      du signal numérisé conserve bien le terme \( \phi_n^{\text{réel}} - \phi_{LO}(t_n) \).
+    </p>
+
+    <p>
+      Le point essentiel est que la phase \(\phi_n^{\text{réel}}\) de la sonde \(n\) <b>est préservée</b> lors du 
+      mélange avec l'oscillateur local : celui-ci ne fait que décaler la fréquence porteuse, tout en imprimant sa 
+      propre phase \(\phi_{LO}(t_n)\) sur le résultat. Concrètement, le signal physiquement acquis par la chaîne 
+      (après downconverter et ADC) n'est pas directement ce phaseur, mais une <b>tension réelle échantillonnée 
+      dans le temps</b> :
+
+      \[
+        v_{IF,n}[k] = A_n \cos\!\big(2\pi f_{IF}\, k/f_s + \phi_n^{\text{réel}} - \phi_{LO}(t_n)\big) + \epsilon[k],
+        \quad k = 0, \dots, N-1
+      \]
+
+      À ce stade, l'amplitude \(A_n\) et la phase \(\phi_n^{\text{réel}} - \phi_{LO}(t_n)\) ne sont pas directement 
+      lisibles : elles sont noyées dans une simple suite de valeurs de tension bruitées par \(\epsilon[k]\).
+    </p>
+
+    <p>
+      C'est la <b>transformée de Fourier rapide</b> (FFT) qui permet de les extraire. Elle transforme la suite 
+      temporelle \(v_{IF,n}[k]\) en un spectre complexe, fonction de la fréquence :
+
+      \[
+        X_n(f) = \sum_{k=0}^{N-1} v_{IF,n}[k]\, e^{-j2\pi f k/f_s}
+      \]
+
+      Le signal étant monochromatique (toute son énergie concentrée à la fréquence intermédiaire \(f_{IF} = 40\) MHz), 
+      un seul point de ce spectre nous intéresse : le bin correspondant à \(f_{IF}\). On y récupère précisément le 
+      phaseur mesuré :
+
+      \[
+        X_n(f_{IF}) \;\approx\; \frac{A_n}{2}\, e^{j\left(\phi_n^{\text{réel}} - \phi_{LO}(t_n)\right)} 
+        = \frac{A_n}{2}\, e^{j\phi_n^{\text{mesuré}}}
+      \]
+
+      ce qui redonne bien l'expression de \(\phi_n^{\text{mesuré}}\) énoncée plus haut.
+    </p>
+
+    <p>
+      L'intérêt de passer par la FFT plutôt que de chercher à lire \(A_n\) et \(\phi_n^{\text{mesuré}}\) directement 
+      sur le signal temporel brut est double : d'une part, elle sépare le signal utile (concentré en un seul bin) 
+      du bruit \(\epsilon[k]\) (réparti sur l'ensemble du spectre), ce qui améliore fortement le rapport signal/bruit 
+      effectif de l'estimation ; d'autre part, elle exploite l'intégralité des \(N\) échantillons de la fenêtre 
+      d'acquisition, ce qui moyenne l'effet du bruit et donne une estimation bien plus précise et robuste que 
+      n'importe quelle lecture ponctuelle sur la forme d'onde.
+    </p>
+
+
+
+
+    <h2 id="2">II. Electromagnetisme : Rappel des principes physiques </h2>
+
+    Cette section a pour but de rappeler dans les grandes lignes les principes physiques de l'electromagnetisme.
+
+    <h3 id="2.1">Signal continu périodique </h3>
+
+    <p>
+      Un signal périodique dans le temps peut être entièrement caractérisé par 
+      son <strong>amplitude</strong> (force du signal) et sa <strong>phase</strong> (position dans le cycle). 
+      Soit un signal sinusoïdal :
+      \[ f(t) = A \sin(\omega t + \alpha), \]
+      \( \omega \) est la pulsation, \(\alpha\) la phase initiale, et  \(A\) l'amplitude : un réel positif qui a la même unité que \(f(t)\) (volts, mètres, etc.).
+      On a de plus : 
+      \[\omega = 2\pi f = \dfrac{2\pi}{T},  \tag{1}\] 
+      avec \(T\) la période et \(f\) la fréquence du signal. 
+      La phase instantanée vérifie alors \( \phi(t) = \omega t + \alpha \) à \(2\pi\) près.  La phase est une grandeur exprimée 
+      en radians car pouvant toujours être ramenée sur le cercle unité du fait de la périodicité de \(2\pi\).
+    </p>
+
+    <p>
+      Des signaux de même pulsation dont les phases sont identiques sont dits <strong>en phase</strong>, sinon ils sont 
+      <strong>déphasés</strong>. S'ils diffèrent d'une demi-période (déphasage de \(\pi\)), ils sont en 
+      <strong>opposition de phase</strong>. Pour des ondes, on parle alors d'<strong>interférences</strong> 
+      <strong>constructives</strong> (amplitudes qui s'additionnent) ou <strong>destructives</strong> (amplitudes qui se retranchent).
+    </p>
+
+
+    <h4 id="1">Notation complexe </h4>
+
+
+    <p>
+      On utilise généralement la notation complexe pour encoder l'information de la phase et de l'amplitude,
+      via la formule d'Euler : 
+      \[ e^{i\theta} = \cos(\theta) + i \sin(\theta).
+      \tag{2}
+      \]
+      Un signal réel sinusoïdal \( s(t) = A \cos(\omega t + \alpha) \) peut s'écrire comme la partie réelle d'un signal complexe :
+      \[ s(t) = \text{Re}\left[ A \, e^{i(\omega t + \alpha)} \right] 
+      = \text{Re}\left[ A e^{i( \alpha)}\, e^{i\omega t} \right] 
+       = \text{Re}\left[ \underline{S} \, e^{i \omega t} \right] 
+       \]
+
+      où l'on a factorisé la dépendance temporelle \( e^{i\omega t} \) commune aux signaux de même pulsation et regroupé 
+      l'amplitude et la phase initial en une quantité \( \underline{S}  \in \mathbb{C}\) nommée <strong>phaseur</strong> :
+      \[ \underline{S} = A \, e^{i\alpha} = A\cos(\alpha) + i A \sin(\alpha) \]
+
+       \( |\underline{S}| = A \) donne l'amplitude du signal et 
+      \( \arg(\underline{S}) = \alpha \) la phase initiale.
+    </p>
+
+    <p>
+      L'intérêt  de cette notation est  aussi de transformer des opérations complexes en  
+      opérations algébriques sur les phaseurs. En effet, dériver revient à multiplier par \( i \omega \) :
+      \[ \frac{d}{dt}\left( \underline{S} \, e^{i \omega t} \right) = i \omega \, \underline{S} \, e^{i \omega t} \]
+      et intégrer revient à diviser par \( i \omega \) :
+      \[ \int \underline{S} \, e^{i \omega t} \, dt = \frac{\underline{S}}{i \omega} \, e^{i \omega t} + C \]
+      Un déphasage de \( \varphi_0 \) se traduit simplement par une multiplication du phaseur par \( e^{i \varphi_0} \).
+    </p>
+
+    <p>
+      Cette représentation est très pratique pour sommer des signaux de même pulsation \(\omega\), i.e de même fréquence 
+      car la somme des signaux réels  correspond exactement à la partie réelle de la somme des phaseurs : 
+      \[ s_1(t) + s_2(t) = \text{Re}\left[ (\underline{S}_1 + \underline{S}_2) \, e^{i \omega t} \right] \]
+    </p>
+
+    <p>
+      <strong>Attention :</strong> cette simplification n'est valable que pour des opérations linéaires . Par exemple, généralement : <br>
+       \( \text{Re}[\underline{S}_1 e^{i\omega t}] \cdot \text{Re}[\underline{S}_2 e^{i\omega t}] \neq 
+      \text{Re}[\underline{S}_1 \underline{S}_2 e^{2i\omega t}] \).
+    </p>
+
+    <section id="glossaire">
+  <h2>Glossaire</h2>
+
+  <p>
+    <strong>ADC</strong> : <em>Analog-to-Digital Converter</em> : convertisseur permettant de transformer un signal analogique en signal numérique.<br>
+    <strong>AFNOR</strong> : <em>Association française de normalisation</em> : organisme français chargé notamment de la normalisation et de la certification.<br>
+    <strong>AFNUM</strong> : <em>Alliance Française des Industries du Numérique</em> : association professionnelle qui représente en France les industriels de l’électronique, des antennes, des réseaux 
+    d’infrastructures télécom, de l’informatique, de l’impression, de la photographie et des objets connectés. <br>
+    <strong>AGC</strong> : <em>Automatic Gain Control</em> : dispositif permettant d’ajuster automatiquement le gain d’un signal.<br>
+    <strong>ANFR</strong> : <em>Agence nationale des fréquences</em> : organisme français chargé notamment de la gestion du spectre radioélectrique.<br>
+    <strong>ARF</strong> : <br>
+    <strong>BancCalCV</strong> : <br>
+    <strong>BDD</strong> : <em>Base de données</em> : ensemble structuré de données permettant leur stockage, leur consultation et leur traitement.<br>
+    <strong>BEQ</strong> : <br>
+    <strong>CST</strong> : <em>Computer Simulation Technology</em> : logiciel de simulation électromagnétique, notamment utilisé pour simuler les champs et les antennes.<br>
+    <strong>CV</strong> : <br>
+    <strong>D-Phase</strong> : <br>
+    <strong>DAS</strong> : <em>Débit d’absorption spécifique</em> (<em>Specific Absorption Rate, SAR</em>) : mesure de l’énergie électromagnétique absorbée par un tissu biologique, exprimée en W/kg.<br>
+    <strong>DC</strong> : <em>Direct Current</em> : courant électrique continu.<br>
+    <strong>DPVI</strong> : <br>
+    <strong>DSSP</strong> : <br>
+    <strong>DUT</strong> : <em>Device Under Test</em> : dispositif ou équipement soumis à un test ou à une mesure.<br>
+    <strong>EIRP</strong> : <em>Equivalent Isotropically Radiated Power</em> : puissance rayonnée équivalente d’une antenne isotrope, tenant compte de la puissance émise et du gain de l’antenne.<br>
+    <strong>EM</strong> : <em>Electromagnetic</em> : relatif à l’électromagnétisme ou aux phénomènes électromagnétiques.<br>
+    <strong>EMC</strong> : <em>Electromagnetic Compatibility</em> : compatibilité électromagnétique, c’est-à-dire capacité d’un équipement à fonctionner correctement sans perturber ou être perturbé par son environnement électromagnétique.<br>
+    <strong>FCC</strong> : <em>Federal Communications Commission</em> : organisme américain chargé notamment de réglementer les communications électroniques et les fréquences radio.<br>
+    <strong>Feko</strong> : logiciel de simulation électromagnétique utilisé notamment pour l’analyse d’antennes et de structures rayonnantes.<br>
+    <strong>FFT</strong> : <em>Fast Fourier Transform</em> : algorithme permettant de calculer efficacement la transformée de Fourier discrète.<br>
+    <strong>FIX</strong> : <br>
+    <strong>FT</strong> : <em>Fourier Transform</em> : transformation permettant de représenter un signal dans le domaine fréquentiel.<br>
+    <strong>GP</strong> : <br>
+    <strong>IEC</strong> : <em>International Electrotechnical Commission</em> : organisme international élaborant des normes dans les domaines électrique, électronique et électrotechnique.<br>
+    <strong>IEEE</strong> : <em>Institute of Electrical and Electronics Engineers</em> : organisation internationale produisant notamment des normes et publications scientifiques dans les domaines de l’électronique, de l’informatique et des télécommunications.<br>
+    <strong>KLOK</strong> : <br>
+    <strong>LTE</strong> : <em>Long Term Evolution</em> : standard de télécommunications mobiles correspondant notamment à la 4G.<br>
+    <strong>LPN Body</strong> : <br>
+    <strong>MIMO</strong> : <em>Multiple-Input Multiple-Output</em> : technique utilisant plusieurs antennes en émission et/ou en réception pour améliorer les performances d’une liaison radio.<br>
+    <strong>MUX</strong> : <em>Multiplexer</em> : dispositif permettant de sélectionner une entrée parmi plusieurs pour la transmettre vers une sortie.<br>
+    <strong>NR</strong> : <em>New Radio</em> : technologie d’accès radio utilisée par la 5G.<br>
+    <strong>OTA</strong> : <em>Over-The-Air</em> : désigne généralement des mesures ou communications réalisées par voie radio, sans connexion physique directe.<br>
+    <strong>p-HRP</strong> : <br>
+    <strong>Phantom</strong> : modèle physique ou numérique reproduisant les propriétés électromagnétiques d’un corps ou d’un tissu biologique pour effectuer des mesures ou simulations.<br>
+    <strong>Phasor</strong> : représentation complexe d’une grandeur sinusoïdale permettant notamment de représenter son amplitude et sa phase.<br>
+    <strong>PMK</strong> : <br>
+    <strong>Probe</strong> : sonde de mesure utilisée pour capter ou caractériser une grandeur physique.<br>
+    <strong>Prp</strong> : <br>
+    <strong>PWS</strong> : <br>
+    <strong>RB</strong> : <em>Resource Block</em> : unité de ressources radio utilisée notamment dans les systèmes LTE et 5G.<br>
+    <strong>RF</strong> : <em>Radio Frequency</em> : radiofréquence, désignant les signaux ou phénomènes électromagnétiques utilisés dans les communications radio.<br>
+    <strong>SAR</strong> : <em>Specific Absorption Rate</em> : terme anglais correspondant au débit d’absorption spécifique (DAS).<br>
+    <strong>SARLAB</strong> : <br>
+    <strong>SCAL</strong> : <br>
+    <strong>Specore</strong> : <br>
+    <strong>SVAL</strong> : <br>
+    <strong>SVM</strong> : <em>Support Vector Machine</em> : méthode d’apprentissage supervisé utilisée notamment pour la classification et la régression.<br>
+    <strong>TAS</strong> : <br>
+    <strong>TRP</strong> : <em>Total Radiated Power</em> : puissance totale rayonnée par un dispositif, généralement mesurée sur l’ensemble des directions de rayonnement.<br>
+    <strong>TRPLAB</strong> : <br>
+    <strong>VNA</strong> : <em>Vector Network Analyzer</em> : analyseur de réseau vectoriel permettant notamment de mesurer les paramètres S d’un dispositif ou d’une antenne.<br>
+    <strong>Virtual Matlab</strong> :
+  </p>
+</section>
+
+    <div>
+
+    </div>
+
+    
+
+
+  
+
+</div>
+
+
+  
+
+
+<script>
+document.querySelectorAll('.toc .collapsible').forEach(item => {
+  const arrow = item.querySelector('.arrow');
+  if (arrow) {
+    arrow.addEventListener('click', e => {
+      e.stopPropagation(); // empêche d'affecter le lien
+      item.classList.toggle('active');
+    });
+  }
+});
+</script>
+
+
+
+{% endblock %}
+

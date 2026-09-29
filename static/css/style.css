@@ -1,0 +1,483 @@
+/* =====================================================================
+   1. POLICES
+   ===================================================================== */
+
+/* New Computer Modern — graisse Book (plus nourrie que Latin Modern) */
+@font-face {
+  font-family: 'NewCM';
+  src: url('/static/fonts/NewCM10-Regular.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'NewCM';
+  src: url('/static/fonts/NewCM10-Italic.otf') format('opentype');
+  font-weight: normal;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'NewCM';
+  src: url('/static/fonts/NewCM10-Bold.otf') format('opentype');
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+}
+
+
+/* =====================================================================
+   2. BASE
+   ===================================================================== */
+
+body {
+  font-family: 'NewCM', 'Latin Modern Roman', serif;
+  font-size: 18px;
+  line-height: 1.6;
+  color: #222;
+  background-color: #f9f9f9;
+  margin: 0;
+  padding: 0;
+
+  /* Flex pour garder le footer en bas */
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+
+/* =====================================================================
+   3. TYPOGRAPHIE
+   ===================================================================== */
+
+h1 {
+  margin-bottom: 1.8rem;
+}
+
+h2 {
+  margin-top: 2.5rem;
+  margin-bottom: 1.4rem;
+}
+
+h3 {
+  margin-top: 2rem;
+  margin-bottom: 1.2rem;
+}
+
+h4, h5, h6 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.8rem;
+}
+
+p {
+  overflow-wrap: break-word;   /* casse les mots trop longs si besoin */
+  margin-bottom: 0.5rem;       /* espace entre paragraphes */
+  line-height: 1.4;            /* espace vertical entre lignes */
+}
+
+
+/* =====================================================================
+   4. STRUCTURE : HEADER / NAV / MAIN / FOOTER
+   ===================================================================== */
+
+/* ---------- Header ---------- */
+
+header {
+  background-color: #eee;
+  padding: 1rem;
+}
+
+/* Container principal : nom | titre | icônes */
+.header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Nom à gauche */
+.header-left .name {
+  font-size: 1.2rem;
+  font-weight: normal;
+}
+
+/* Titre centré */
+.header-center {
+  flex: 1;
+  text-align: center;
+}
+
+.header-center h1 {
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+/* Icônes à droite */
+.header-icons img {
+  width: 34px;
+  height: 34px;
+  margin-left: 10px;
+  vertical-align: middle;
+}
+
+/* ---------- Navigation ---------- */
+
+nav {
+  text-align: center;
+  margin-top: 0.5rem;
+}
+
+nav a {
+  text-decoration: none;
+  color: #0645ad;
+  margin: 0 0.5rem;
+}
+
+nav a:hover {
+  text-decoration: underline;
+}
+
+/* ---------- Main : prend tout l'espace restant ---------- */
+
+main {
+  flex: 1;
+  padding: 2rem;
+}
+
+/* ---------- Footer ---------- */
+
+footer {
+  text-align: center;
+  padding: 1rem;
+  background-color: #eee;
+  font-size: 1rem;
+}
+
+
+/* =====================================================================
+   5. MISE EN PAGE DU CONTENU
+   ===================================================================== */
+
+/* Conteneur global : sommaire + bloc de texte */
+.page-container {
+  display: flex;
+  justify-content: center;
+  gap: 0;
+}
+
+/* Bloc de texte principal */
+.text-block {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 1rem 1.5rem;
+
+  text-align: justify;
+  hyphens: auto;               /* césure : évite les grands espaces entre mots */
+  -webkit-hyphens: auto;       /* Safari — nécessite <html lang="fr"> */
+  line-height: 1.6;
+
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.caption {
+  text-align: center;
+}
+
+
+/* =====================================================================
+   6. SOMMAIRE (TOC)
+   ===================================================================== */
+
+.toc {
+  position: sticky;
+  top: 0;                      /* colle au haut du viewport */
+  align-self: flex-start;      /* aligné avec le haut du text-block */
+  width: 250px;
+  height: fit-content;
+  padding: 1rem;
+  font-size: 0.9rem;
+  background: #f9f9f9;
+  border-radius: 8px;
+}
+
+.toc h4 {
+  margin-top: 0;
+  font-size: 1rem;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 0.5rem;
+}
+
+.toc ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+.toc li {
+  margin: 0.5rem 0;
+}
+
+.toc li ul {
+  padding-left: 1.5rem;        /* indentation des sous-listes */
+}
+
+.toc a {
+  text-decoration: none;
+  color: #0077cc;
+}
+
+.toc a:hover {
+  text-decoration: underline;
+}
+
+/* ---------- Sections déroulantes ---------- */
+
+.toc .collapsible {
+  position: relative;
+  padding-left: 1.2rem;
+}
+
+.toc .collapsible > a {
+  margin-left: 0.3rem;
+}
+
+/* Flèche */
+.toc .collapsible .arrow {
+  position: absolute;
+  left: 0;
+  top: 0.1rem;
+  font-size: 1.1rem;
+  line-height: 1rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.toc .collapsible .arrow::before {
+  content: "▸";
+  display: inline-block;       /* requis pour que transform s'applique */
+  transition: transform 0.2s;
+}
+
+/* Rotation quand ouvert */
+.toc .collapsible.active .arrow::before {
+  transform: rotate(90deg);
+}
+
+/* Sous-liste masquée / affichée */
+.toc .collapsible ul {
+  display: none;
+}
+
+.toc .collapsible.active ul {
+  display: block;
+}
+
+/* Cacher le sommaire sur petits écrans */
+@media (max-width: 1350px) {
+  .toc {
+    display: none;
+  }
+}
+
+
+/* =====================================================================
+   7. PAGE D'ACCUEIL : INTRO / TAGS / PROJETS
+   ===================================================================== */
+
+/* ---------- Intro ---------- */
+
+#intro {
+  font-size: 2.2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #1a1a1a;
+  margin-bottom: 0.3rem;
+}
+
+#intro .subtitle {
+  display: block;
+  font-size: 1.8rem;
+  font-weight: 400;
+  color: #555;
+  margin-top: 0.4rem;
+}
+
+/* ---------- Tags / hashtags ---------- */
+
+.tags {
+  margin-bottom: 2rem;
+}
+
+.tags span {
+  display: inline-block;
+  margin-right: 0.6rem;
+  margin-top: 0.4rem;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #1e6bd6;
+  background-color: rgba(30, 107, 214, 0.08);
+  border-radius: 12px;
+}
+
+/* ---------- Liste de projets ---------- */
+
+.project-list ul {
+  list-style-type: none;
+  padding-left: 0;
+  margin-top: 1rem;
+}
+
+.project-list ul > li {
+  margin-bottom: 1.5rem;
+}
+
+.project-list ul > li > strong {
+  display: block;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 0.5rem;
+  padding-left: 8px;
+  border-left: 3px solid #4a7cb1;
+}
+
+/* Sous-listes */
+.project-list ul ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin-top: 0.3rem;
+}
+
+.project-list ul ul li {
+  margin-bottom: 0.4rem;
+}
+
+.project-list a {
+  text-decoration: none;
+  color: #004080;
+}
+
+.project-list a:hover {
+  text-decoration: underline;
+  color: #002d59;
+}
+
+.project-list em {
+  font-style: italic;
+  font-size: 0.9rem;
+  color: #6c757d;
+}
+
+.github-note {
+  color: #444;
+  margin-top: 1.5rem;
+}
+
+
+/* =====================================================================
+   8. PAGE BLACKJACK
+   ===================================================================== */
+
+/* ---------- Tableaux ---------- */
+
+table.W0 {
+  width: auto;
+  margin: 0.5em auto;          /* centré + marges légères */
+  border-collapse: collapse;   /* fusionne les bordures */
+  border: 1.5px solid #3333339c;
+  font-size: 14px;
+}
+
+table.W0 th,
+table.W0 td {
+  border: 1px solid #999;
+  padding: 2px;
+}
+
+table.W0 th {
+  font-weight: normal;
+  background-color: #f5f5f5;
+}
+
+table.W0 caption {
+  caption-side: bottom;        /* légende sous le tableau */
+  text-align: center;
+  margin-top: 30px;
+}
+
+/* ---------- Pseudo-code ---------- */
+
+.pseudo-code {
+  display: block;
+  width: fit-content;
+  margin: 20px auto;
+  padding: 12px 18px;
+
+  font-family: "Fira Code", monospace;
+  font-size: 15px;
+  font-weight: 400;
+  font-variant-ligatures: none;
+  line-height: 1.5;
+  white-space: pre;
+  text-align: left;
+
+  background-color: #fafafa;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.pseudo-code::first-line {
+  font-weight: 500;
+}
+
+/* ---------- Grille de dataframes (iframes) ---------- */
+
+.tableaux {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;    /* gauche + droite */
+  grid-template-rows: 1fr 1.25fr;      /* haut + bas à droite */
+  column-gap: 12px;
+  row-gap: 0;                          /* rapproche df2 et df3 */
+  max-width: 100%;
+  height: 700px;
+}
+
+.df1 {
+  grid-column: 1;
+  grid-row: 1 / span 2;                /* toute la hauteur à gauche */
+}
+
+.df2 {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.df3 {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+/* Attention : s'applique à toutes les iframes du site */
+iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+
+/* =====================================================================
+   9. DIVERS
+   ===================================================================== */
+
+/* Donut ASCII */
+#donut-container pre {
+  font-family: monospace;
+  font-size: 7px;
+  line-height: 7px;            /* réduit l'espacement vertical */
+  letter-spacing: -0.8px;      /* réduit l'espacement horizontal */
+  margin: 0;
+}

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block content %}
+
+
+
+<div style="display: flex; justify-content: space-between; align-items: flex-start;">
+    <div>
+        <h2>Bienvenue</h2>
+        <p>
+            Ce site regroupe certains de mes projets pertinents en Mathématiques, Statistiques, IA et Finance quantitative. 
+            Les codes à leur réalisation sont disponibles sur mon lien GitHub. 
+            Les éventuels sources et articles sont également cités.
+        </p>
+    </div>
+
+
+    <div id="donut-container" style="width: 200px; height: 200px;">
+        <pre id="donut"></pre>
+    </div>
+</div>
+
+
+
+<div class="project-list">
+<ul>
+
+  <li>
+    <strong>Physique et mesure</strong>
+    <ul>
+      <li><a href="{{ url_for('signal') }}">Base du traitement de signal</a></li>
+  
+    </ul>
+  </li>
+
+
+
+  <li>
+    <strong>Apprentissage par renforcement et contrôle optimal</strong>
+    <ul>
+      <li><a href="{{ url_for('blackjack') }}">Contrôle optimal au Blackjack par MDP (Processus de Decision Markovien) </a></li>
+      <li><a href="{{ url_for('blackjack') }}">Modélisation stochastique de la courbe des taux d’intérêt</a></li>
+      <li><a href="{{ url_for('blackjack') }}">Modélisation du risque de crédit par processus de défaut</a></li>
+    </ul>
+  </li>
+
+  <li>
+    <strong>Théorie sur les réseau de neurones artificiels profonds / DNN</strong>
+    <ul>
+      <li><a href="{{ url_for('mlp') }}">MLP (Multi-Layer Perceptron)</a> <em>(en préparation)</em></li>
+      <li><a href="{{ url_for('blackjack') }}">Théorie de la prédiction conformelle</a></li>
+      <li><a href="{{ url_for('blackjack') }}">Dilemme biais–variance et régularisation des modèles</a></li>
+      <li><a href="{{ url_for('blackjack') }}">Projet de computer vision</a> <em>(à venir)</em></li>
+      <li><a href="{{ url_for('blackjack') }}">Applications de l’IA générative</a> <em>(à venir)</em></li>
+    </ul>
+  </li>
+
+  <li>
+    <strong>Finance quantitative et gestion d’actifs</strong>
+    <ul>
+      <li><a href="{{ url_for('blackjack') }}">Backtest et optimisation de portefeuilles (ETF, stratégies passives et actives)</a></li>
+      <li><a href="{{ url_for('blackjack') }}">Méthodes de tarification et modèles actuariels</a> <em>(en développement)</em></li>
+      <li><a href="{{ url_for('blackjack') }}">Analyse de sensibilité et calcul des “Greeks”</a> <em>(en préparation)</em></li>
+      <li><a href="{{ url_for('blackjack') }}">Pricing des futures et forwards</a> <em>(en préparation)</em></li>
+      <li><a href="{{ url_for('blackjack') }}">Pricing des options (Black–Scholes, Monte Carlo, modèles stochastiques)</a> <em>(en préparation)</em></li>
+      <li><a href="{{ url_for('blackjack') }}">Modélisation du risque de marché</a> <em>(à venir)</em></li>
+    </ul>
+  </li>
+
+</ul>
+</div>
+
+  
+
+{% endblock %}

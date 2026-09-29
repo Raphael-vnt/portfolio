@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title if title else "Portfolio" }}</title>
+
+    <!-- Style latin roman
+    
+    
+    -->
+
+    <link rel="stylesheet"
+  href="https://cdn.jsdelivr.net/gh/sugina-dev/latin-modern-web@1.0.1/style/latinmodern-roman.css">
+    
+    <!-- CSS du site -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+    <header>
+        <div class="header-container">
+            <div class="header-left">
+                <span class="name">Raphaël Vinteler</span>
+            </div>
+        
+            <div class="header-center">
+                <h1>Mon Portfolio Maths / Stats / IA / Finance</h1>
+            </div>
+        
+            <div class="header-icons">
+                <a href="https://github.com/tonprofil" target="_blank"><img src="{{ url_for('static', filename='images/github.png') }}" alt="GitHub"></a><a href="https://linkedin.com/in/tonprofil" target="_blank"><img src="{{ url_for('static', filename='images/linkedin.png') }}" alt="LinkedIn"></a>
+            </div>
+        </div>
+        <nav>
+            <a href="{{ url_for('home') }}">Accueil</a> |
+            <a href="{{ url_for('blackjack') }}">A propos</a>
+        </nav>
+    </header>
+
+    
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+
+    <footer>
+        <p>© 2025 - Mon Portfolio</p>
+    </footer>
+
+    {% block scripts %}
+
+    <!-- MathJax chargé pour toutes les pages -->
+
+
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
+
+
+    <script>
+        const pre = document.getElementById("donut");
+        const width = 60;   // correspond à la largeur du <pre>
+        const height = 30;  // hauteur du <pre>
+        const chars = ".,-~:;=!*#$@";
+
+        let A = 0, B = 0;
+        let autoSpeed = 0.02;
+        let sensitivity = 0.01;
+        let lastMove = Date.now();
+        let mouseControl = false;
+        let timeout = 500;
+
+        document.addEventListener("mousemove", e => {
+            const rect = pre.getBoundingClientRect();
+            // ne compter que les mouvements dans la zone donut
+            if (e.clientX >= rect.left && e.clientX <= rect.right &&
+                e.clientY >= rect.top && e.clientY <= rect.bottom) {
+                const dx = e.movementX;
+                const dy = e.movementY;
+                if (dx || dy) {
+                    A += dy * sensitivity;
+                    B += dx * sensitivity;
+                    lastMove = Date.now();
+                    mouseControl = true;
+                }
+            }
+        });
+
+        function render() {
+            let output = Array(width * height).fill(" ");
+            let zbuffer = Array(width * height).fill(0);
+
+            for (let theta = 0; theta < 6.28; theta += 0.07) {
+                for (let phi = 0; phi < 6.28; phi += 0.02) {
+                    const cosA = Math.cos(A), sinA = Math.sin(A);
+                    const cosB = Math.cos(B), sinB = Math.sin(B);
+                    const costheta = Math.cos(theta), sintheta = Math.sin(theta);
+                    const cosphi = Math.cos(phi), sinphi = Math.sin(phi);
+                    const circlex = 2 + costheta;
+                    const circley = sintheta;
+
+                    let x = circlex * (cosB * cosphi + sinA * sinB * sinphi) - circley * cosA * sinB;
+                    let y = circlex * (sinB * cosphi - sinA * cosB * sinphi) + circley * cosA * cosB;
+                    let z = 5 + cosA * circlex * sinphi + circley * sinA;
+                    let ooz = 1 / z;
+
+                    let xp = Math.floor(7 + width/2 + width * ooz * x * 0.5);
+                    let yp = Math.floor(height/2 - height * ooz * y * 0.5 );
+                    let idx = xp + width * yp;
+                    let L = cosphi * costheta * sinB - cosA * costheta * sinphi - sinA * sintheta + cosB * (cosA * sintheta - costheta * sinA * sinphi);
+
+                    if (yp >= 0 && yp < height && xp >= 0 && xp < width && ooz > zbuffer[idx]) {
+                        zbuffer[idx] = ooz;
+                        let luminance_index = Math.floor(L * 8);
+                        output[idx] = chars[luminance_index > 0 ? luminance_index : 0];
+                    }
+                }
+            }
+
+            let text = "";
+            for (let i = 0; i < output.length; i++) {
+                text += output[i];
+                if ((i+1) % width === 0) text += "\n";
+            }
+            pre.textContent = text;
+
+            if (mouseControl && Date.now() - lastMove > timeout) mouseControl = false;
+            if (!mouseControl) {
+                A += autoSpeed;
+                B += autoSpeed / 2;
+            }
+
+            requestAnimationFrame(render);
+        }
+
+        render();
+        </script>
+
+
+    {% endblock %}
+</body>
+</html>
