@@ -397,11 +397,9 @@
     </p>
 
     <h3 id="2.2">II.2 Entrainement du MLP </h3>
+    
 
-    <p>
-        <b> Descente de gradient </b>
-    </p>
-
+    <h4 id="2.2">Descente de Gradient </h4>
     <p>
       Comme pour le perceptron, l'objectif du modèle est de déterminer l'ensemble des poids et biais \( \, (\mathbf{W}^{(l)}, \mathbf{b}^{(l)}) \,  \) pour tout  \( l \in [\![2, L]\!] \),  
       minimisant une fonction de coût \( \,  \mathcal{L} \, \). Pour \( N \in \mathbb{N}^*\) observations servant à l'entraînement, on a :  
@@ -422,7 +420,7 @@
     <p>
       Pour tout \( l \in [\![2, L]\!] \), on définit le gradient de \(\mathcal{L}\) par rapport aux poids et biais de la couche \(l\), respectivement de mêmes dimensions que \(W^{(l)}\) et \(\mathbf{b}^{(l)}\) :
       \[
-        \nabla_{W^{(l)}} \mathcal{L} = 
+        \nabla_{\mathbf{W}^{(l)}} \mathcal{L} = 
         \begin{pmatrix}
           \dfrac{\partial \mathcal{L}}{\partial w_{1,1}^{(l)}} & \cdots & \dfrac{\partial \mathcal{L}}{\partial w_{1,d_{l-1}}^{(l)}} \\
           \vdots & \ddots & \vdots \\
@@ -443,22 +441,24 @@
     <p>
       Le gradient complet de \(\mathcal{L}\) sur l'ensemble des paramètres du réseau est alors la collection de ces gradients sur toutes les couches :
       \[
-        \nabla \mathcal{L} = \Big( \nabla_{W^{(l)}} \mathcal{L}, \; \nabla_{\mathbf{b}^{(l)}} \mathcal{L} \Big)_{l=2}^{L} \; \in \; \mathbb{R}^{n_w + n_b}.
+        \nabla \mathcal{L} = \Big( \nabla_{\mathbf{W}^{(l)}} \mathcal{L}, \; \nabla_{\mathbf{b}^{(l)}} \mathcal{L} \Big)_{l=2}^{L} \; \in \; \mathbb{R}^{n_w + n_b}.
       \]
      
     </p>
+
+    
 
     <p>
       La descente de gradient met à jour, à chaque itération \(t\), l'ensemble des poids et biais du MLP dans la direction opposée au gradient, en se rapprochant d'un minimum local de \(\mathcal{L}\). 
       Pour tout \( l \in [\![2, L]\!] \) :
       \[
-        W^{(l)}_{t+1} = W^{(l)}_{t} - \eta \, \nabla_{W^{(l)}} \mathcal{L}, 
+        \mathbf{W}^{(l)}_{t+1} = \mathbf{W}^{(l)}_{t} - \eta \, \nabla_{\mathbf{W}^{(l)}} \mathcal{L}, 
         \qquad
         \mathbf{b}^{(l)}_{t+1} = \mathbf{b}^{(l)}_{t} - \eta \, \nabla_{\mathbf{b}^{(l)}} \mathcal{L},
         \tag{9}
       \]
-      où \(\eta > 0\) est le taux d'apprentissage, les gradients étant évalués aux valeurs courantes \(W^{(l)}_{t}\) et \(\mathbf{b}^{(l)}_{t}\). En regroupant l'ensemble des paramètres sous la forme 
-      \( \, \theta = \big(W^{(l)}, \mathbf{b}^{(l)}\big)_{l=2}^{L} \, \), cette mise à jour s'écrit plus simplement :
+      où \(\eta > 0\) est le taux d'apprentissage, les gradients étant évalués aux valeurs courantes \(\mathbf{W}^{(l)}_{t}\) et \(\mathbf{b}^{(l)}_{t}\). En regroupant l'ensemble des paramètres sous la forme 
+      \( \, \theta = \big(\mathbf{W}^{(l)}, \mathbf{b}^{(l)}\big)_{l=2}^{L} \, \), cette mise à jour s'écrit plus simplement :
       \[
         \theta_{t+1} = \theta_t - \eta \, \nabla \mathcal{L}(\theta_t).
         \tag{10}
@@ -474,7 +474,7 @@
       \]
       et la mise à jour des paramètres \( (9)-(10) \) devient :
       \[
-        W^{(l)}_{t+1} = W^{(l)}_{t} - \eta \, \nabla_{W^{(l)}} \mathcal{L}_{\mathcal{B}_t}, 
+        \mathbf{W}^{(l)}_{t+1} = \mathbf{W}^{(l)}_{t} - \eta \, \nabla_{\mathbf{W}^{(l)}} \mathcal{L}_{\mathcal{B}_t}, 
         \qquad
         \mathbf{b}^{(l)}_{t+1} = \mathbf{b}^{(l)}_{t} - \eta \, \nabla_{\mathbf{b}^{(l)}} \mathcal{L}_{\mathcal{B}_t},
         \tag{12}
@@ -592,6 +592,7 @@
       &= \sum_{i=1}^{d_{l+1}} \dfrac{\partial \mathcal{L}_{n}}{\partial z_{i,n}^{(l+1)}} \cdot \sum_{m=1}^{d_l} w_{i,m}^{(l+1)} \cdot \dfrac{\partial a_{m,n}^{(l)}}{\partial z_{j,n}^{(l)}} \\[2mm]
       &= \sum_{i=1}^{d_{l+1}} \sum_{m=1}^{d_l} w_{i,m}^{(l+1)}  \cdot \dfrac{\partial a_{m,n}^{(l)}}{\partial z_{j,n}^{(l)}} \cdot \dfrac{\partial \mathcal{L}_{n}}{\partial z_{i,n}^{(l+1)}}
       \end{aligned}
+      \tag{16}
       \]
     </p>
 
@@ -599,11 +600,59 @@
       Puisque nous avons exprimer \( \, \dfrac{\partial \mathcal{L}_{n}}{\partial z_{j,n}^{(L)}} \, \), nous pouvons déterminer 
       \( \, \dfrac{\partial \mathcal{L}_{n}}{\partial z_{j,n}^{(L-1)}} \, \) puis \( \, \dfrac{\partial \mathcal{L}_{n}}{\partial z_{j,n}^{(l)}} \, \)
        pour tout  \( \, l \in  [\![2, L-1]\!] \, \)  
-       par récurrence. On peut alors déterminer les gradients \( \, \nabla_{W^{(l)}} \mathcal{L}_{\mathcal{B}_t} \, \) 
-       et \(  \, \nabla_{\mathbf{b}^{(l)}} \mathcal{L}_{\mathcal{B}_t} \, \) à partir de 
-       \( \, \nabla_{W^{(l+1)}} \mathcal{L}_{\mathcal{B}_t} \, \) et \( \, \nabla_{\mathbf{b}^{(l+1)}} \mathcal{L}_{\mathcal{B}_t} \, \)
-       Cette relation de récurrence permettant de calculer les gradients se nomme la <b>backpropagation</b> en référence au fait que l'on calcule
-       les gradients couche par couche, en partant de la dernière couche \(L\).
+       par récurrence. 
+    </p>
+
+    <p>
+      Cette formule justifie le terme de <b> backpropagation</b> puisque l'on utilise les poids et biais de la couche \(l+1\) pour calculer ceux de la couche \(l\). On commence alors de la couche
+      \(L\) pour remonter jusqu'à la première couche \(l=2\).
+    </p>
+
+      <p>
+      <br>
+      <br>
+        <b> Notation vectorielle </b>
+        <br>
+        <br>
+    </p>
+
+    <p>
+      Nous pouvons réecrire la backprogation sous forme vectorielle. 
+      Notons 
+      \[ 
+
+     
+      \, \boldsymbol{\delta}_n^{(l)} =
+       \begin{pmatrix}
+          \dfrac{\partial \mathcal{L}_{n}}{\partial z_{j,1}^{(l)}} \\
+          \vdots \\
+          \dfrac{\partial \mathcal{L}_{n}}{\partial z_{j,d_l}^{(l)}}
+        \end{pmatrix}
+        \in \mathbb{R}^{d_{l}},
+      \qquad 
+      \nabla_{\mathbf{z}}\mathbf{a}^{(l)}_n = 
+        \begin{pmatrix}
+          \dfrac{\partial a_{1,n}^{(l)}}{\partial z_{1,n}^{(l)}} & \cdots & \dfrac{\partial a_{d_l,n}^{(l)}}{\partial z_{1,n}^{(l)}} \\
+          \vdots & \ddots & \vdots \\
+          \dfrac{\partial a_{1,n}^{(l)}}{\partial z_{d_l,n}^{(l)}} & \cdots & \dfrac{\partial a_{d_l,n}^{(l)}}{\partial z_{d_l,n}^{(l)}}
+        \end{pmatrix}
+        \in \mathbb{R}^{d_{l} \times d_{l-1}}.
+
+
+      \] 
+      On a alors directement via \( (15) \) et \( (16) \) que : 
+      
+       \[
+      \boldsymbol{\delta}_n^{(l)}  =
+      \begin{cases}
+      \nabla_{\mathbf{z}}\mathbf{a}^{(L)}_n \cdot \nabla_{\mathbf{a}}\mathcal{L}_n
+      & \text{si }  N \in \mathbb{N}^*  \\[6pt]
+      (\mathbf{S} , \mathbf{H}_n ,\mathbf{D}_1)
+      & \text{si } N = \infty
+      \end{cases}
+      \]
+
+
     </p>
 
     
