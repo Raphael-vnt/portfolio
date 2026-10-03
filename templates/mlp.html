@@ -629,8 +629,20 @@
           \dfrac{\partial \mathcal{L}_{n}}{\partial z_{j,d_l}^{(l)}}
         \end{pmatrix}
         \in \mathbb{R}^{d_{l}},
-      \qquad 
-      \nabla_{\mathbf{z}}\mathbf{a}^{(l)}_n = 
+        
+        \qquad
+
+        \nabla_{\mathbf{a_n^{(l)}}}\mathcal{L}_{n} =
+       \begin{pmatrix}
+          \dfrac{\partial \mathcal{L}_{n}}{\partial a_{j,1}^{(l)}} \\
+          \vdots \\
+          \dfrac{\partial \mathcal{L}_{n}}{\partial a_{j,d_l}^{(l)}}
+        \end{pmatrix}
+        \in \mathbb{R}^{d_{l}},
+
+      \qquad
+
+      \nabla_{\mathbf{z_n^{(l)}}}\mathbf{a}^{(l)}_n = 
         \begin{pmatrix}
           \dfrac{\partial a_{1,n}^{(l)}}{\partial z_{1,n}^{(l)}} & \cdots & \dfrac{\partial a_{d_l,n}^{(l)}}{\partial z_{1,n}^{(l)}} \\
           \vdots & \ddots & \vdots \\
@@ -638,21 +650,34 @@
         \end{pmatrix}
         \in \mathbb{R}^{d_{l} \times d_{l-1}}.
 
-
+        \tag{17}
       \] 
+
+    </p>
+
+    <p>
       On a alors directement via \( (15) \) et \( (16) \) que : 
       
        \[
       \boldsymbol{\delta}_n^{(l)}  =
       \begin{cases}
-      \nabla_{\mathbf{z}}\mathbf{a}^{(L)}_n \cdot \nabla_{\mathbf{a}}\mathcal{L}_n
-      & \text{si }  N \in \mathbb{N}^*  \\[6pt]
-      (\mathbf{S} , \mathbf{H}_n ,\mathbf{D}_1)
-      & \text{si } N = \infty
-      \end{cases}
+      \nabla_{\mathbf{z_n^{(L)}}}\mathbf{a}^{(L)}_n \cdot \nabla_{\mathbf{a_n^{(L)}}}\mathcal{L}_{n}
+      & \text{si }  l =L   \\[6pt]
+      \nabla_{\mathbf{z_n^{(l)}}}\mathbf{a}^{(l)}_n  \cdot \Big( \mathbf{W}^{(l+1)} \Big)^T  \boldsymbol{\delta}_n^{(l+1)} 
+      & \text{si } l \in [\![2, L-1]\!]
+      \end{cases}.
+      \tag{18}
       \]
+    </p>
 
-
+    <p>
+      Et finalement pour le gradient final :
+      \[
+        \nabla_{W^{(l)}} \mathcal{L}_{\mathcal{B}_t} = \frac{1}{|\mathcal{B}_t|} \sum_{n \in \mathcal{B}_t} \boldsymbol{\delta}_n^{(l)} \, \big(\mathbf{a}_n^{(l-1)}\big)^{T},
+        \qquad
+        \nabla_{\mathbf{b}^{(l)}} \mathcal{L}_{\mathcal{B}_t} = \frac{1}{|\mathcal{B}_t|} \sum_{n \in \mathcal{B}_t} \boldsymbol{\delta}_n^{(l)}.
+        \tag{19}
+      \]
     </p>
 
     
