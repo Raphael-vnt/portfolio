@@ -7,50 +7,27 @@
   <div class="toc">
     <h4>Sommaire</h4>
     <ul>
-      <li><a href="#Presentation">Présentation du jeu et de ses règles</a></li>
+      <li><a href="#intro">Introduction</a></li>
 
       <li class="collapsible">
         <span class="arrow"></span>
-        <a href="#1">I. Définition formelle du processus</a>
+        <a href="#1">I. Le Perceptron</a>
         <ul>
-          <li><a href="#1.1"> I.1 Suite de tirage de cartes dans un sabot fini et infini</a></li>
-          <li><a href="#1.2">I.2 Constitution de la main du joueur et du croupier</a></li>
-          <li><a href="#1.3">I.3 Fin de partie et gains du joueur</a></li>
-          <li><a href="#1.4">I.4 Propriétés de Markov et espérance de gains</a></li>
+          <li><a href="#1.1">I.1 Définition et fonction d'activation</a></li>
+          <li><a href="#1.2">I.2 Classification binaire et algorithme de Rosenblatt</a></li>
+          <li><a href="#1.3">I.3 Convergence et limites du perceptron</a></li>
         </ul>
       </li>
 
       <li class="collapsible">
         <span class="arrow"></span>
-        <a href="#2">II. Probabilités d'états absorbants du croupier et espérance de Stand</a>
+        <a href="#2">II. Le Multi-Layer Perceptron</a>
         <ul>
-          <li><a href="#2.1">II.1 Résolution par calcul matriciel pour le cas \(N = +\infty\)</a></li>
-          <li><a href="#2.2"> II.2 Résolution  par programmation dynamique pour le cas \(N \in \mathbb{N}^*\)</a></li>
+          <li><a href="#2.1">II.1 Architecture et prédiction du modèle</a></li>
+          <li><a href="#2.2">II.2 Entraînement du MLP</a></li>
+          <li><a href="#2.3">II.3 Exemple : sortie softmax et coût cross-entropy</a></li>
         </ul>
       </li>
-
-      <li class="collapsible">
-        <span class="arrow"></span>
-        <a href="#3">III. Processus de décision Markovien (PDM), stratégie d'arrêt du joueur, espérance de Hit et Split</a>
-        <ul>
-          <li><a href="#3.1">III.1 Définitions et propriétés</a></li>
-          <li><a href="#3.2">III.2 PDM pour le cas \(N = \infty\)</a></li>
-          <li><a href="#3.3">III.3 PDM pour le cas \(N \in \mathbb{N}^* \)</a></li>
-        </ul>
-      </li>
-
-      <li class="collapsible">
-        <span class="arrow"></span>
-        <a href="#4">IV. Espérance de gain à long terme, Ruine, Mise secondaire et comptage de cartes</a>
-        <ul>
-          <li><a href="#4.1">IV.1 Approximation des moments d'ordre 1 et 2, convergence et distribution</a></li>
-          <li><a href="#4.2">IV.2 Ruine et réussite du joueur</a></li>
-          <li><a href="#4.3">IV.3 Mise secondaire</a></li>
-          <li><a href="#4.4">IV.4 Comptage de cartes</a></li>
-
-        </ul>
-      </li>
-
 
     </ul>
   </div>
@@ -82,6 +59,8 @@
 
     <h2 id="1">I. Le Perceptron</h2>
 
+    <h3 id="1.1">I.1 Définition et fonction d'activation</h3>
+
     <p>
       Le perceptron constitue l'une des formes les plus simples de réseau de neurones artificiels (ANN) introduit par Rosenblatt (1958).
       Il s'agit d'un simple neurone prenant en entrée un vecteur :
@@ -99,7 +78,7 @@
         a = \sigma\left(\sum_{i=0}^{d} w_i x_i\right)
         \tag{1}
       \]
-       où \(a \in \mathbb{R}\) représente la sortie, du perceptron.
+       où \(a \in \mathbb{R}\) représente la sortie du perceptron.
       Dans le perceptron classique, la fonction d'activation est généralement une fonction seuil, que l'on peut définir par exemple par :
 
       \(
@@ -113,14 +92,15 @@
 
     
     <figure style="text-align:center;">
-    <img src="{{ url_for('static', filename='images/mlp/perceptron.png') }}" alt="perceptron" width="280">
+    <img src="{{ url_for('static', filename='images/MLP/perceptron.png') }}" alt="perceptron" width="280">
       <figcaption> <strong>Figure 1.</strong> Représentation du perceptron</figcaption>
     </figure>
 
 
+    <h3 id="1.2">I.2 Classification binaire et algorithme de Rosenblatt</h3>
+
     <p>
-      <br>
-      Le perceptron peut ainsi être utiliser pour des tâches de classification binaire. 
+      Le perceptron peut ainsi être utilisé pour des tâches de classification binaire. 
       On considère un jeu de données \((\mathbf{X}, \mathbf{y})\) de \(n\) observations et \(d\) variables tels que :    
     </p>
 
@@ -151,14 +131,14 @@
     </p>
 
     <p>
-      L'ensemble \( \mathcal{S} = \{ (\mathbf{x}_1, y_1 ), \dots , (\mathbf{x}_n, y_n) \} \) est linéarement séparable i.e il existe un hyperplan séparant les deux 
+      On suppose dans un premier temps que l'ensemble \( \mathcal{S} = \{ (\mathbf{x}_1, y_1 ), \dots , (\mathbf{x}_n, y_n) \} \) est linéairement séparable, i.e. il existe un hyperplan séparant les deux 
       classes de données.
       Le vecteur de sortie prédit par le perceptron vaut : 
       \[
        a_{\mathbf{w}}(\mathbf{X}) = \sigma(\mathbf{X}  \mathbf{w} )
       \tag{2}
       \]
-      L'objectif d'apprentissage du perceptron est de déterminer \( \mathbf{w} \in \mathbf{R}^{d+1}\) minimisant 
+      L'objectif d'apprentissage du perceptron est de déterminer \( \mathbf{w} \in \mathbb{R}^{d+1}\) minimisant 
        la fonction de coût ou <i>loss function</i>. <br>
        Cette fonction pénalise le modèle sur ses erreurs de prédictions. Cette dernière vaut pour le perceptron : 
 
@@ -171,14 +151,17 @@
     </p>
 
     <p>
-      L'algorithme de Rosenblatt de mise à jour des poids peut être résumé par : 
-
+      L'algorithme de Rosenblatt de mise à jour des poids peut être résumé par l'algorithme 1 ci-dessous.
+      Le critère d'arrêt porte sur l'existence d'une observation mal classée, et non sur la condition \( \mathcal{L}(\mathbf{w}) > 0 \) :
+      en effet \( \mathcal{L}(\mathbf{0}) = 0 \), et plus généralement une observation située sur l'hyperplan, i.e. telle que
+      \( y_i \langle \mathbf{w} , \mathbf{x}_i \rangle = 0 \), ne contribue pas à \( \mathcal{L} \) bien qu'elle ne soit pas correctement classée.
+      Ainsi \( \mathcal{L}(\mathbf{w}) = 0 \) n'implique pas que toutes les observations soient bien classées.
     </p>
 
 <div class="pseudo-code">
   <b>function</b> \(\text{updateWeights}(\mathbf{X}, \mathbf{y})\)
-      \(\mathbf{w} \leftarrow 0_{\mathbb{R^{d+1}}} \)
-      <b>while </b>\(\mathcal{L}(\mathbf{w}) > 0 \) :
+      \(\mathbf{w} \leftarrow \mathbf{0}_{\mathbb{R}^{d+1}} \)
+      <b>while </b>\(\exists \, i \in [\![1, n]\!] \, : \, y_i \langle \mathbf{w} , \mathbf{x}_i \rangle \leq 0 \) :
           <b>for each</b> \(i \in \{1,\dots, n\} \)
             <b>if</b> \(  y_i  \langle \mathbf{w} , \mathbf{x}_i \rangle \leq 0  \) :
               \(\mathbf{w} \leftarrow \mathbf{w} + y_i \mathbf{x}_i \)
@@ -189,19 +172,25 @@
     <strong>Algorithme 1.</strong> Apprentissage du perceptron
   </div>
 
+    <h3 id="1.3">I.3 Convergence et limites du perceptron</h3>
+
     <p>
-      <br>
       <b>Théorème de convergence de Novikoff. \(\quad \)</b> 
 
-      L'algorithme du perceptron converge si et seulement si \( \, \mathbf{S}\) est linéarement séparable.
-      De plus, le nombre d'iterations maximale est bornée par \( \, (R / \gamma)^2 \), tels que : 
+      On définit le rayon \(R\) de l'échantillon et la marge \(\gamma\) de \(\mathcal{S}\) par :
 
       \[
-       R = \max_{k \in [1,n]} \|\mathbf{x}_k\|, 
-      \quad \text{ et } \quad \gamma = \max_{\mathbf{w} \in \mathbb{R}^{d+1}} 
-      \min_{(\mathbf{x},y) \in \mathcal{S}} \left\{ \frac{y\langle \mathbf{w}, \mathbf{x}\rangle}{\|\mathbf{w}\|}\right\}
+       R = \max_{k \in [\![1,n]\!]} \|\mathbf{x}_k\|, 
+      \quad \text{ et } \quad \gamma = \max_{\mathbf{w} \in \mathbb{R}^{d+1} \setminus \{\mathbf{0}\}} 
+      \min_{(\mathbf{x},y) \in \mathcal{S}} \left\{ \frac{y\langle \mathbf{w}, \mathbf{x}\rangle}{\|\mathbf{w}\|}\right\}.
       \tag{4}
        \]
+
+      Si \( \mathcal{S} \) est linéairement séparable, i.e. \( \gamma > 0 \), alors l'algorithme 1 s'arrête après au plus \( (R / \gamma)^2 \) mises à jour
+      du vecteur \( \mathbf{w} \) (i.e. au plus \( (R / \gamma)^2 \) erreurs de classification rencontrées, et non itérations de la boucle).
+      Réciproquement, si l'algorithme 1 s'arrête, le vecteur \( \mathbf{w} \) renvoyé vérifie \( y_i \langle \mathbf{w} , \mathbf{x}_i \rangle > 0 \)
+      pour tout \( i \in [\![1,n]\!] \) : \( \mathcal{S} \) est donc linéairement séparable. L'algorithme converge ainsi si et seulement si
+      \( \mathcal{S} \) est linéairement séparable.
       <br>
     </p>
 
@@ -224,7 +213,9 @@
 
     <h2 id="2">II. Le Multi-Layer Perceptron</h2>
 
-    <h3 id="2.1">II.1 Architecture et expression de prediction du modèle</h3>
+    <h3 id="2.1">II.1 Architecture et prédiction du modèle</h3>
+
+    <h4 id="2.1.1">Structure en couches</h4>
 
 
     <p>
@@ -249,7 +240,7 @@
     
 
     <figure style="text-align:center;">
-    <img src="{{ url_for('static', filename='images/mlp/mlp.png') }}" alt="mlp" width="600">
+    <img src="{{ url_for('static', filename='images/MLP/mlp.PNG') }}" alt="mlp" width="600">
       <figcaption> <strong>Figure 3.</strong> Exemple de MLP à 3 couches</figcaption>
     </figure>
 
@@ -259,6 +250,8 @@
     </p>
 
     
+
+    <h4 id="2.1.2">Fonctions d'activation</h4>
 
     <p>
       Une autre différence notable avec le perceptron concerne les fonctions d’activation. Le perceptron simple utilise une fonction seuil non dérivable, rendant impossible l'entraînement du modèle 
@@ -277,7 +270,7 @@
 
 
     <figure style="text-align:center;">
-    <img src="{{ url_for('static', filename='images/mlp/activations.png') }}" alt="activations" width="450">
+    <img src="{{ url_for('static', filename='images/MLP/activations.png') }}" alt="activations" width="450">
       <figcaption> <strong>Figure 4.</strong> Exemple de fonctions d'activation </figcaption>
     </figure>
 
@@ -288,14 +281,11 @@
 
 
 
-    <p>
-      <br>
-        <b> Matrice de poids, récurrence entre couches et vecteur de sortie </b>
-    </p>
+    <h4 id="2.1.3">Matrices de poids, récurrence entre couches et vecteur de sortie</h4>
     
     <p>
-      Par la suite, on distinguera les poids-biais des poids hors-bais. 
-      Le terme "poids" désignera les poids n'étant pas relié à un biais, le terme "biais" désignera les poids relié aux biais. 
+      Par la suite, on distinguera les poids-biais des poids hors-biais. 
+      Le terme "poids" désignera les poids n'étant pas reliés à un biais, le terme "biais" désignera les poids reliés aux biais. 
     </p>
 
 
@@ -306,7 +296,7 @@
       \[
         n_w = \sum_{l=2}^{L} d_{l-1}  \times d_{l}, \qquad n_b = \sum_{l=2}^{L} d_{l}.
         \tag{5}
-      \]\
+      \]
     </p>
 
     <p>
@@ -322,7 +312,7 @@
     </p>
 
     <p>
-      Soit \( l \in [\![2, L]\!] \), on définit la matrice de poids \(\, W^{(l)} \, \) et le vecteur de biais \(\mathbf{b}^{(l)}\)
+      Soit \( l \in [\![2, L]\!] \), on définit la matrice de poids \(\, \mathbf{W}^{(l)} \, \) et le vecteur de biais \(\mathbf{b}^{(l)}\)
        reliant la couche \(l-1\) à la couche \(l\), respectivement de dimensions \( \, d_{l} \times d_{l-1} \, \) et  \( \, d_{l}\) :
       \[
         \mathbf{W}^{(l)} =
@@ -380,7 +370,7 @@
    
 
     <figure style="text-align:center;">
-    <img src="{{ url_for('static', filename='images/mlp/illustration_poids.png') }}" alt="illustration_poids" width="350">
+    <img src="{{ url_for('static', filename='images/MLP/illustration_poids.png') }}" alt="illustration_poids" width="350">
       <figcaption> <strong>Figure 5.</strong> Représentation de certains biais, poids et neurones </figcaption>
     </figure>
 
@@ -394,14 +384,13 @@
 
       avec pour tout \( l \in [\![1, L-1]\!] \)
       \[
-        f^{(l+1)}\big( \mathbf{a}^{(l)} \big) = \boldsymbol{\sigma}^{(l+1)}\big(W^{(l+1)} \mathbf{a}^{(l)} + \mathbf{b}^{(l+1)}\big).
+        f^{(l+1)}\big( \mathbf{a}^{(l)} \big) = \boldsymbol{\sigma}^{(l+1)}\big(\mathbf{W}^{(l+1)} \mathbf{a}^{(l)} + \mathbf{b}^{(l+1)}\big).
       \]
     </p>
 
-    <h3 id="2.2">II.2 Entrainement du MLP </h3>
-    
+    <h3 id="2.2">II.2 Entraînement du MLP</h3>
 
-    <h4 id="2.2">Descente de Gradient </h4>
+    <h4 id="2.2.1">Descente de gradient</h4>
     <p>
       Comme pour le perceptron, l'objectif du modèle est de déterminer l'ensemble des poids et biais \( \, (\mathbf{W}^{(l)}, \mathbf{b}^{(l)}) \,  \) pour tout  \( l \in [\![2, L]\!] \),  
       minimisant une fonction de coût \( \,  \mathcal{L} \, \). Pour \( N \in \mathbb{N}^*\) observations servant à l'entraînement, on a :  
@@ -410,7 +399,7 @@
       \tag{8} 
       \]
 
-       où les \(\, \mathcal{L}_n \, \) sont les fonctions de coût individuels appliquée à une observation. 
+       où les \(\, \mathcal{L}_n \, \) sont les fonctions de coût individuelles, appliquées à une observation. 
 
       La méthode d'optimisation de référence des ANN repose sur la descente de gradient. 
     </p>
@@ -420,8 +409,8 @@
     </p>
     
     <p>
-      Pour tout \( l \in [\![2, L]\!] \), on définit le gradient de \(\mathcal{L}\) par rapport aux poids et biais de la couche \(l\), respectivement de mêmes dimensions que \(W^{(l)}\) et \(\mathbf{b}^{(l)}\) comme les
-      jacobiennes suivantes :
+      Pour tout \( l \in [\![2, L]\!] \), on définit le gradient de \(\mathcal{L}\) par rapport aux poids et biais de la couche \(l\), respectivement de mêmes dimensions que \(\mathbf{W}^{(l)}\) et \(\mathbf{b}^{(l)}\) comme les
+      matrices de dérivées partielles suivantes :
       \[
         \nabla_{\mathbf{W}^{(l)}} \mathcal{L} = 
         \begin{pmatrix}
@@ -442,7 +431,7 @@
     </p>
 
     <p>
-      Le gradient complet de \(\mathcal{L}\) sur l'ensemble des paramètres du réseau est alors la collection de ces gradients sur toutes les couches :
+      Le gradient complet de \(\mathcal{L}\) sur l'ensemble des paramètres du réseau est alors la collection de ces gradients sur toutes les couches, que l'on identifie, après vectorisation des matrices \( \nabla_{\mathbf{W}^{(l)}} \mathcal{L} \), à un vecteur de \( \mathbb{R}^{n_w + n_b} \) :
       \[
         \nabla \mathcal{L} = \Big( \nabla_{\mathbf{W}^{(l)}} \mathcal{L}, \; \nabla_{\mathbf{b}^{(l)}} \mathcal{L} \Big)_{l=2}^{L} \; \in \; \mathbb{R}^{n_w + n_b}.
       \]
@@ -468,8 +457,10 @@
       \]
     </p>
 
+    <h4 id="2.2.2">Descente de gradient stochastique par batch</h4>
+
     <p>
-      En pratique, calculer \(\nabla \mathcal{L}\) sur l'ensemble des \(n\) observations à chaque itération est coûteux, en particulier lorsque \(n\) est grand. On utilise alros généralement une estimation du gradient calculée 
+      En pratique, calculer \(\nabla \mathcal{L}\) sur l'ensemble des \(N\) observations à chaque itération est coûteux, en particulier lorsque \(N\) est grand. On utilise alors généralement une estimation du gradient calculée 
       sur un sous-ensemble \(\mathcal{B}_t \subset [\![1, N]\!]\) d'observations tiré à l'itération \(t\), appelé « batch », de taille \(|\mathcal{B}_t| \leq N\). La fonction de coût batch s'écrit alors :
       \[
         \mathcal{L}_{\mathcal{B}_t} = \frac{1}{|\mathcal{B}_t|} \sum_{n \in \mathcal{B}_t} \mathcal{L}_n,
@@ -487,13 +478,7 @@
     </p>
 
 
-    <p>
-      <br>
-      <br>
-        <b> Calcul du gradient via backpropagation </b>
-        <br>
-        <br>
-    </p>
+    <h4 id="2.2.3">Calcul du gradient par rétropropagation (backpropagation)</h4>
 
     <p>
       Soit \( \, (j,k,l) \in [\![1, d_{l}]\!] \times [\![1, d_{l-1}]\!] \times [\![2, L]\!] \, \).
@@ -611,13 +596,7 @@
       \(L\) pour remonter jusqu'à la première couche \(l=2\).
     </p>
 
-      <p>
-      <br>
-      <br>
-        <b> Notation vectorielle </b>
-        <br>
-        <br>
-    </p>
+    <h4 id="2.2.4">Formulation vectorielle de la rétropropagation</h4>
 
     <p>
       Nous pouvons réecrire la backpropagation sous forme vectorielle. 
@@ -676,7 +655,7 @@
     <p>
       Et finalement pour le gradient final :
       \[
-        \nabla_{W^{(l)}} \mathcal{L}_{\mathcal{B}_t} = \frac{1}{|\mathcal{B}_t|} \sum_{n \in \mathcal{B}_t} \boldsymbol{\delta}_n^{(l)} \, \big(\mathbf{a}_n^{(l-1)}\big)^{T},
+        \nabla_{\mathbf{W}^{(l)}} \mathcal{L}_{\mathcal{B}_t} = \frac{1}{|\mathcal{B}_t|} \sum_{n \in \mathcal{B}_t} \boldsymbol{\delta}_n^{(l)} \, \big(\mathbf{a}_n^{(l-1)}\big)^{T},
         \qquad
         \nabla_{\mathbf{b}^{(l)}} \mathcal{L}_{\mathcal{B}_t} = \frac{1}{|\mathcal{B}_t|} \sum_{n \in \mathcal{B}_t} \boldsymbol{\delta}_n^{(l)}.
         \tag{19}
@@ -688,19 +667,19 @@
     </p>
 
     <div class="pseudo-code">
-  <b>function</b> \(\text{backpropagation}(\mathcal{B}_t, (W^{(l)}, \mathbf{b}^{(l)})_{l=2}^{L})\)
+  <b>function</b> \(\text{backpropagation}(\mathcal{B}_t, (\mathbf{W}^{(l)}, \mathbf{b}^{(l)})_{l=2}^{L})\)
       <b>for each</b> \( n \in \mathcal{B}_t \) :
           \( \mathbf{a}_n^{(1)} \leftarrow \mathbf{x}_n \)
           <b>for</b> \( l = 2 \) <b>to</b> \( L \) :
-              \( \mathbf{z}_n^{(l)} \leftarrow W^{(l)} \mathbf{a}_n^{(l-1)} + \mathbf{b}^{(l)} \)
+              \( \mathbf{z}_n^{(l)} \leftarrow \mathbf{W}^{(l)} \mathbf{a}_n^{(l-1)} + \mathbf{b}^{(l)} \)
               \( \mathbf{a}_n^{(l)} \leftarrow \boldsymbol{\sigma}^{(l)}\big(\mathbf{z}_n^{(l)}\big) \)
           \( \boldsymbol{\delta}_n^{(L)} \leftarrow \nabla_{\mathbf{z}_n^{(L)}}\mathbf{a}_n^{(L)} \cdot \nabla_{\mathbf{a}_n^{(L)}}\mathcal{L}_{n} \)
           <b>for</b> \( l = L-1 \) <b>downto</b> \( 2 \) :
-              \( \boldsymbol{\delta}_n^{(l)} \leftarrow \nabla_{\mathbf{z}_n^{(l)}}\mathbf{a}_n^{(l)} \cdot \big( W^{(l+1)} \big)^{T} \, \boldsymbol{\delta}_n^{(l+1)} \)
+              \( \boldsymbol{\delta}_n^{(l)} \leftarrow \nabla_{\mathbf{z}_n^{(l)}}\mathbf{a}_n^{(l)} \cdot \big( \mathbf{W}^{(l+1)} \big)^{T} \, \boldsymbol{\delta}_n^{(l+1)} \)
       <b>for</b> \( l = 2 \) <b>to</b> \( L \) :
-          \( \nabla_{W^{(l)}} \mathcal{L}_{\mathcal{B}_t} \leftarrow \dfrac{1}{|\mathcal{B}_t|} \displaystyle\sum_{n \in \mathcal{B}_t} \boldsymbol{\delta}_n^{(l)} \big(\mathbf{a}_n^{(l-1)}\big)^{T} \)
+          \( \nabla_{\mathbf{W}^{(l)}} \mathcal{L}_{\mathcal{B}_t} \leftarrow \dfrac{1}{|\mathcal{B}_t|} \displaystyle\sum_{n \in \mathcal{B}_t} \boldsymbol{\delta}_n^{(l)} \big(\mathbf{a}_n^{(l-1)}\big)^{T} \)
           \( \nabla_{\mathbf{b}^{(l)}} \mathcal{L}_{\mathcal{B}_t} \leftarrow \dfrac{1}{|\mathcal{B}_t|} \displaystyle\sum_{n \in \mathcal{B}_t} \boldsymbol{\delta}_n^{(l)} \)
-      <b>return</b> \( \big(\nabla_{W^{(l)}} \mathcal{L}_{\mathcal{B}_t}, \nabla_{\mathbf{b}^{(l)}} \mathcal{L}_{\mathcal{B}_t}\big)_{l=2}^{L} \)
+      <b>return</b> \( \big(\nabla_{\mathbf{W}^{(l)}} \mathcal{L}_{\mathcal{B}_t}, \nabla_{\mathbf{b}^{(l)}} \mathcal{L}_{\mathcal{B}_t}\big)_{l=2}^{L} \)
 </div>
 <div class="caption">
     <strong>Algorithme 2.</strong> Rétropropagation du gradient sur un batch
@@ -708,8 +687,9 @@
 
 
 
+    <h4 id="2.2.5">Entraînement par epochs</h4>
+
     <p>
-      <br>
       Jusqu'ici, chaque batch \( \mathcal{B}_t \) était tiré indépendamment et aléatoirement dans \( [\![1,N]\!] \), sans garantie que l'ensemble des observations soit parcouru équitablement. 
       En pratique, l'entraînement d'un MLP est structuré en <b>epochs</b> : une epoch désigne un passage complet sur les \(N\) observations d'entraînement, réalisé en les partitionnant en batches disjoints.
     </p>
@@ -725,8 +705,7 @@
         \qquad \mathcal{B}_k^{e} \cap \mathcal{B}_{k'}^{e} = \emptyset \; \text{ pour } k \neq k',
       \]
       i.e \( \big(\mathcal{B}_k^{e}\big)_{k=1}^{K} \) forme une partition de \( [\![1,N]\!] \) . 
-      Une epoch consiste alors à appliquer la mise à jour \((9)\)-\((10)\) successivement pour <br>
-       \(k=1,\dots,K\).
+      Une epoch consiste alors à appliquer la mise à jour \((12)\) successivement aux batches \( \mathcal{B}_k^{e} \), pour \(k=1,\dots,K\).
 
     </p>
 
@@ -737,17 +716,17 @@
 
 
 <div class="pseudo-code">
-  <b>function</b> \(\text{BatchTraining}\big(\mathbf{X}, \mathbf{y}, (W^{(l)}, \mathbf{b}^{(l)})_{l=2}^{L}, \eta, m, E\big)\)
-      initialiser \( \, (W^{(l)}, \mathbf{b}^{(l)})_{l=2}^{L} \)
+  <b>function</b> \(\text{BatchTraining}\big(\mathbf{X}, \mathbf{y}, (\mathbf{W}^{(l)}, \mathbf{b}^{(l)})_{l=2}^{L}, \eta, m, E\big)\)
+      initialiser \( \, (\mathbf{W}^{(l)}, \mathbf{b}^{(l)})_{l=2}^{L} \)
       <b>for</b> \( e = 1 \) <b>to</b> \( E \) :
           tirer une permutation aléatoire \( \pi_e \) de \( [\![1, N]\!] \)
           partitionner \( \pi_e \) en \( K = \lceil N/m \rceil \) batches \( \big(\mathcal{B}_k^{e}\big)_{k=1}^{K} \) de taille \(m\)
           <b>for</b> \( k = 1 \) <b>to</b> \( K \) :
-              \( \big(\nabla_{W^{(l)}} \mathcal{L}_{\mathcal{B}_k^{e}}, \nabla_{\mathbf{b}^{(l)}} \mathcal{L}_{\mathcal{B}_k^{e}}\big)_{l=2}^{L} \leftarrow \text{backpropagation}\big(\mathcal{B}_k^{e}, (W^{(l)}, \mathbf{b}^{(l)})_{l=2}^{L}\big) \)
+              \( \big(\nabla_{\mathbf{W}^{(l)}} \mathcal{L}_{\mathcal{B}_k^{e}}, \nabla_{\mathbf{b}^{(l)}} \mathcal{L}_{\mathcal{B}_k^{e}}\big)_{l=2}^{L} \leftarrow \text{backpropagation}\big(\mathcal{B}_k^{e}, (\mathbf{W}^{(l)}, \mathbf{b}^{(l)})_{l=2}^{L}\big) \)
               <b>for</b> \( l = 2 \) <b>to</b> \( L \) :
-                  \( W^{(l)} \leftarrow W^{(l)} - \eta \, \nabla_{W^{(l)}} \mathcal{L}_{\mathcal{B}_k^{e}} \)
+                  \( \mathbf{W}^{(l)} \leftarrow \mathbf{W}^{(l)} - \eta \, \nabla_{\mathbf{W}^{(l)}} \mathcal{L}_{\mathcal{B}_k^{e}} \)
                   \( \mathbf{b}^{(l)} \leftarrow \mathbf{b}^{(l)} - \eta \, \nabla_{\mathbf{b}^{(l)}} \mathcal{L}_{\mathcal{B}_k^{e}} \)
-      <b>return</b> \( (W^{(l)}, \mathbf{b}^{(l)})_{l=2}^{L} \)
+      <b>return</b> \( (\mathbf{W}^{(l)}, \mathbf{b}^{(l)})_{l=2}^{L} \)
 </div>
 <div class="caption">
     <strong>Algorithme 3.</strong> Descente de gradient batch par epochs
@@ -756,13 +735,9 @@
 
 
 
-    <h3 id="2.2">II.3 Exemple d'application </h3>
+    <h3 id="2.3">II.3 Exemple : sortie softmax et coût cross-entropy</h3>
 
-    <p>
-        <b> Cas particulier : couche de sortie softmax et coût cross-entropy </b>
-        <br>
-        <br>
-    </p>
+    <h4 id="2.3.1">Position du problème</h4>
 
     <p>
       Traitons maintenant un cas concret, très fréquent pour les tâches de classification multi-classe : une couche de sortie softmax, associée à la fonction de coût cross-entropy. On pose \(C := d_L\) le nombre de classes, et \(\mathbf{y}_n \in \{0,1\}^C\) le vecteur one-hot du label de l'observation \(n\), i.e \(y_{i,n} = 1\) si \(n\) appartient à la classe \(i\), \(0\) sinon, avec \(\sum_{i=1}^{C} y_{i,n} = 1\). La fonction de coût pour une observation \(n\) s'écrit :
@@ -774,12 +749,13 @@
       \[
         a_{j,n}^{(L)} = \sigma_j^{(L)}\big(\mathbf{z}_n^{(L)}\big) = \dfrac{e^{z_{j,n}^{(L)}}}{\sum_{k=1}^{C} e^{z_{k,n}^{(L)}}}.
       \]
-      C'est un cas où l'activation n'est pas component-wise : d'après \((16)\), le calcul de \(\delta_{j,n}^{(L)}\) nécessite la jacobienne complète \(\partial a_{i,n}^{(L)}/\partial z_{j,n}^{(L)}\).
+      C'est un cas où l'activation n'agit pas composante par composante : d'après \((15)\), le calcul de \(\delta_{j,n}^{(L)}\) nécessite la jacobienne complète \(\partial a_{i,n}^{(L)}/\partial z_{j,n}^{(L)}\).
     </p>
 
+    <h4 id="2.3.2">Jacobienne du softmax</h4>
+
     <p>
-      <br>
-      <b>Calcul de la jacobienne du softmax.</b> Distinguons deux cas :
+      Distinguons deux cas :
     </p>
 
     <p>
@@ -808,9 +784,10 @@
       \]
     </p>
 
+    <h4 id="2.3.3">Expression de \(\boldsymbol{\delta}_n^{(L)}\)</h4>
+
     <p>
-      <br>
-      <b>Calcul de \(\delta_{j,n}^{(L)}\).</b> D'après \((20)\), \(\dfrac{\partial \mathcal{L}_n}{\partial a_{i,n}^{(L)}} = -\dfrac{y_{i,n}}{a_{i,n}^{(L)}}\). En combinant avec \((16)\) et \((21)\) :
+      D'après \((20)\), \(\dfrac{\partial \mathcal{L}_n}{\partial a_{i,n}^{(L)}} = -\dfrac{y_{i,n}}{a_{i,n}^{(L)}}\). En combinant avec \((15)\) et \((21)\) :
       \[
       \begin{aligned}
         \delta_{j,n}^{(L)} = \dfrac{\partial \mathcal{L}_n}{\partial z_{j,n}^{(L)}} 

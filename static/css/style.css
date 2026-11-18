@@ -71,6 +71,16 @@ h4, h5, h6 {
   margin-bottom: 0.8rem;
 }
 
+/* Sous-titres de niveau 4 dans les articles */
+.text-block h4 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2a2a2a;
+  margin-top: 2rem;
+  padding-bottom: 0.2rem;
+  border-bottom: 1px solid #e3e3e3;
+}
+
 p {
   overflow-wrap: break-word;   /* casse les mots trop longs si besoin */
   margin-bottom: 0.5rem;       /* espace entre paragraphes */
