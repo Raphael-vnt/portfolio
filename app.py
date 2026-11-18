@@ -28,5 +28,9 @@ def mlp():
 def signal():
     return render_template("signal.html")
 
+@app.route("/pws")
+def pws():
+    return render_template("pws.html")
+
 if __name__ == "__main__":
     app.run(debug=True)

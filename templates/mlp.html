@@ -63,13 +63,10 @@
     </h1>
 
     <div class="tags">
-      <span>#ChaînesAbsorbantes</span>
-      <span>#MDP</span>
-      <span>#EquationsdeBellman</span>
-      <span>#ProgrammationDynamique</span>
-      <span>#POO</span>
-      <span>#Monte-Carlo</span>
-      <span>#Python</span>
+      <span>#ANN</span>
+      <span>#DeepLearning</span>
+      <span>#Rosenblatt</span>
+      <span>#Rétropropagation</span>
     </div>
 
     <p>
@@ -215,9 +212,14 @@
 
     <figure style="text-align:center; margin-left:0;">
         <img src="{{ url_for('static', filename='images/MLP/perceptron_xor.gif') }}" alt="Training perceptron" width="900">
-        <figcaption> <strong>Figure 2.</strong> Entraînement d'un perceptron sur un échantillon \( \mathcal{S} \) de type XOR</figcaption>
+        <figcaption> <strong>Figure 2.</strong> Entraînement d'un perceptron sur un échantillon \( \mathcal{S} \) non séparable linéairement</figcaption>
         <br>
       </figure>
+
+      <p>
+        Nous allons voir qu'il est possible de s'abstenir de cette hypothèse de séparabilité propre aux modèles linéaires en utilisant un "empilement" de perceptrons formant des couches et
+         relié par des fonctions non-linéaires.
+      </p>
 
 
     <h2 id="2">II. Le Multi-Layer Perceptron</h2>
@@ -418,7 +420,8 @@
     </p>
     
     <p>
-      Pour tout \( l \in [\![2, L]\!] \), on définit le gradient de \(\mathcal{L}\) par rapport aux poids et biais de la couche \(l\), respectivement de mêmes dimensions que \(W^{(l)}\) et \(\mathbf{b}^{(l)}\) :
+      Pour tout \( l \in [\![2, L]\!] \), on définit le gradient de \(\mathcal{L}\) par rapport aux poids et biais de la couche \(l\), respectivement de mêmes dimensions que \(W^{(l)}\) et \(\mathbf{b}^{(l)}\) comme les
+      jacobiennes suivantes :
       \[
         \nabla_{\mathbf{W}^{(l)}} \mathcal{L} = 
         \begin{pmatrix}
@@ -756,8 +759,6 @@
     <h3 id="2.2">II.3 Exemple d'application </h3>
 
     <p>
-      <br>
-      <br>
         <b> Cas particulier : couche de sortie softmax et coût cross-entropy </b>
         <br>
         <br>
@@ -826,14 +827,11 @@
     </p>
 
     <p>
-      La combinaison softmax + cross-entropy conduit donc à une expression de \(\boldsymbol{\delta}_n^{(L)}\) extrêmement simple, ce qui explique en grande partie pourquoi ce couple (activation, coût) est
+      La combinaison softmax + cross-entropy conduit donc à une expression de \(\boldsymbol{\delta}_n^{(L)}\) très simple, ce qui explique en grande partie pourquoi ce couple activation et coût est
        devenu un standard pour la classification multi-classe.
     </p>
 
     
-
-  
-   
 
 
   </div>
